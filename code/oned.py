@@ -13,8 +13,23 @@ import torch.optim as optim
 class Case1D:
 
     @classmethod
-    def from_args(cls, nn, opts):
-        return cls(nn, opts.de, opts.samples)
+    def from_args(cls, nn, args):
+        return cls(nn, args.de, args.samples)
+
+    @classmethod
+    def setup_argparse(cls, parser, **kw):
+        p = parser
+        # Case options
+        p.add_argument(
+            '--nodes', '-n', dest='nodes',
+            default=kw.get('nodes', 10), type=int,
+            help='Number of nodes to use.'
+        )
+        p.add_argument(
+            '--samples', '-s', dest='samples',
+            default=kw.get('samples', 30), type=int,
+            help='Number of sample points to use.'
+        )
 
     def __init__(self, nn, deq, ns):
         '''Initializer
@@ -119,22 +134,71 @@ class Case1D:
 
 class Solver:
     @classmethod
-    def from_args(cls, case, opts):
-        return cls(case, opts.optimizer)
+    def from_args(cls, case, args):
+        optimizers = {'Adam': optim.Adam, 'LBFGS': optim.LBFGS}
+        o = optimizers[args.optimizer]
+        return cls(
+            case, n_train=args.n_train,
+            n_skip=args.n_skip, lr=args.lr, plot=args.plot,
+            out_dir=args.directory, opt_class=o
+        )
 
-    def __init__(self, case, opt_class=optim.Adam):
+    @classmethod
+    def setup_argparse(cls, parser, **kw):
+        p = parser
+        p.add_argument(
+            '--n-train', '-t', dest='n_train',
+            default=kw.get('n_train', 2500), type=int,
+            help='Number of training iterations.'
+        )
+        p.add_argument(
+            '--n-skip', dest='n_skip',
+            default=kw.get('n_skip', 100), type=int,
+            help='Number of iterations after which we print/update plots.'
+        )
+        p.add_argument(
+            '--plot', dest='plot', action='store_true', default=False,
+            help='Show a live plot of the results.'
+        )
+        p.add_argument(
+            '--lr', dest='lr', default=kw.get('lr', 1e-2), type=float,
+            help='Learning rate.'
+        )
+        p.add_argument(
+            '--optimizer', dest='optimizer',
+            default=kw.get('optimizer', 'Adam'),
+            choices=['Adam', 'LBFGS'], help='Optimizer to use.'
+        )
+        p.add_argument(
+            '-d', '--directory', dest='directory',
+            default=kw.get('directory', None),
+            help='Output directory (output files are dumped here).'
+        )
+
+    def __init__(self, case, n_train, n_skip=100, lr=1e-2, plot=True,
+                 out_dir=None, opt_class=optim.Adam):
         '''Initializer
 
         Parameters
         -----------
 
         case: Case: The problem case being solved.
+        n_train: int: Training steps
+        n_skip: int: Print loss every so often.
+        lr: float: Learming rate
+        plot: bool: Plot live solution.
+        out_dir: str: Output directory.
         '''
         self.case = case
         self.opt_class = opt_class
         self.errors = []
         self.loss = []
         self.time_taken = 0.0
+        self.n_train = n_train
+        self.n_skip = n_skip
+        self.lr = lr
+        self.plot = plot
+        self.out_dir = out_dir
 
     def closure(self):
         opt = self.opt
@@ -144,11 +208,13 @@ class Solver:
         self.loss.append(loss.item())
         return loss
 
-    def solve(self, n_train, n_skip=100, lr=1e-2, plot=True):
+    def solve(self):
         case = self.case
-        opt = self.opt_class(case.nn.parameters(), lr=lr)
+        n_train = self.n_train
+        n_skip = self.n_skip
+        opt = self.opt_class(case.nn.parameters(), lr=self.lr)
         self.opt = opt
-        if plot:
+        if self.plot:
             case.plot()
 
         start = time.perf_counter()
@@ -157,7 +223,7 @@ class Solver:
             if i % n_skip == 0 or i == n_train:
                 loss = self.case.loss()
                 err = 0.0
-                if plot:
+                if self.plot:
                     err = case.plot()
                 else:
                     err = case.get_error()
@@ -169,13 +235,17 @@ class Solver:
         time_taken = time.perf_counter() - start
         self.time_taken = time_taken
         print(f"Done. Took {time_taken:.3f} seconds.")
-        if plot:
+        if self.plot:
             plt.show()
 
-    def save(self, dirname):
-        print("Saving output to", dirname)
+    def save(self):
+        dirname = self.out_dir
+        if self.out_dir is None:
+            print("No output directory set.  Skipping.")
+            return
         if not os.path.exists(dirname):
             os.makedirs(dirname)
+        print("Saving output to", dirname)
         fname = os.path.join(dirname, 'solver.npz')
         np.savez(
             fname, loss=self.loss, error=self.errors,
@@ -265,7 +335,7 @@ class Kernel(nn.Module):
         return x
 
 
-def setup_argparse(**kw):
+def setup_argparse(*cls, **kw):
     '''Setup the argument parser.
 
     Any keyword arguments are used as the default values for the parameters.
@@ -274,50 +344,13 @@ def setup_argparse(**kw):
         description="Configurable options.",
         formatter_class=ArgumentDefaultsHelpFormatter
     )
-    # Solver options.
-    p.add_argument(
-        '--n-train', '-t', dest='n_train',
-        default=kw.get('n_train', 2500), type=int,
-        help='Number of training iterations.'
-    )
-    p.add_argument(
-        '--n-skip', dest='n_skip', default=kw.get('n_skip', 100), type=int,
-        help='Number of iterations after which we print/update plots.'
-    )
-    p.add_argument(
-        '--plot', dest='plot', action='store_true', default=False,
-        help='Show a live plot of the results.'
-    )
-    p.add_argument(
-        '--lr', dest='lr', default=kw.get('lr', 1e-2), type=float,
-        help='Learning rate.'
-    )
-    p.add_argument(
-        '--optimizer', dest='optimizer',
-        default=kw.get('optimizer', 'Adam'),
-        choices=['Adam', 'LBFGS'], help='Optimizer to use.'
-    )
-    p.add_argument(
-        '-d', '--directory', dest='directory',
-        default=kw.get('directory', None),
-        help='Output directory (output files are dumped here).'
-    )
+    for c in cls:
+        c.setup_argparse(p, **kw)
     # Differential equation to solve.
     p.add_argument(
         '--de', dest='de', default=kw.get('de', 'sin8'),
         choices=['sin8', 'pulse', 'simple'],
         help='Differential equation to solve.'
-    )
-    # Case options
-    p.add_argument(
-        '--nodes', '-n', dest='nodes',
-        default=kw.get('nodes', 10), type=int,
-        help='Number of nodes to use.'
-    )
-    p.add_argument(
-        '--samples', '-s', dest='samples',
-        default=kw.get('samples', 30), type=int,
-        help='Number of sample points to use.'
     )
     p.add_argument(
         '--activation', '-a', dest='activation',
@@ -355,21 +388,16 @@ def update_args(args):
     }
     args.de = des[args.de]()
 
-    optimizers = {'Adam': optim.Adam, 'LBFGS': optim.LBFGS}
-    args.optimizer = optimizers[args.optimizer]
 
-
-def main(nn_cls, case_cls, parser, update_args=update_args):
+def main(nn_cls, case_cls, solver=Solver, **kw):
+    parser = setup_argparse(solver, nn_cls, case_cls, **kw)
     args = parser.parse_args()
     update_args(args)
 
     nn = nn_cls.from_args(args)
-
     case = case_cls.from_args(nn, args)
-
     solver = Solver.from_args(case, args)
-    solver.solve(
-        n_train=args.n_train, n_skip=args.n_skip, lr=args.lr, plot=args.plot
-    )
+    solver.solve()
+
     if args.directory is not None:
         solver.save(args.directory)

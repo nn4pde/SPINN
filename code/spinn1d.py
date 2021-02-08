@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from oned import Case1D, main, setup_argparse
+from oned import Case1D, main
 
 
 class Shift(nn.Module):
@@ -28,12 +28,26 @@ class Shift(nn.Module):
 class SPINN1D(nn.Module):
     @classmethod
     def from_args(cls, args):
-        return cls(args.nodes, args.activation, args.fixed_h)
+        return cls(args.nodes, args.activation,
+                   fixed_h=args.fixed_h, use_pu=args.pu)
 
-    def __init__(self, n, activation, fixed_h=False):
+    @classmethod
+    def setup_argparse(cls, parser, **kw):
+        p = parser
+        p.add_argument(
+            '--fixed-h', dest='fixed_h', action='store_true', default=False,
+            help='Use fixed width nodes.'
+        )
+        p.add_argument(
+            '--no-pu', dest='pu', action='store_false', default=True,
+            help='Do not use a partition of unity.'
+        )
+
+    def __init__(self, n, activation, fixed_h=False, use_pu=True):
         super().__init__()
 
         self.fixed_h = fixed_h
+        self.use_pu = use_pu
         self.n = n
         self.activation = activation
         self.layer1 = Shift(n, fixed_h=fixed_h)
@@ -43,8 +57,12 @@ class SPINN1D(nn.Module):
         x = x.unsqueeze(1)
         y = self.layer1(x)
         y = self.activation(y)
+        if self.use_pu:
+            y1 = y.sum(axis=1).unsqueeze(1)
+        else:
+            y1 = 1.0
         y = self.layer2(y)
-        return y
+        return y/y1
 
     def show(self):
         params = list(self.parameters())
@@ -66,15 +84,5 @@ class SPINNCase1D(Case1D):
             self.plt3.set_data(x, w)
 
 
-def setup(**kw):
-    p = setup_argparse(**kw)
-    p.add_argument(
-        '--fixed-h', dest='fixed_h', action='store_true', default=False,
-        help='Use fixed width nodes.'
-    )
-    return p
-
-
 if __name__ == '__main__':
-    p = setup(nodes=20, samples=80, lr=1e-2)
-    main(SPINN1D, SPINNCase1D, p)
+    main(SPINN1D, SPINNCase1D, nodes=20, samples=80, lr=1e-2)
