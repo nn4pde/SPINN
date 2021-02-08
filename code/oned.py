@@ -21,11 +21,6 @@ class Case1D:
         p = parser
         # Case options
         p.add_argument(
-            '--nodes', '-n', dest='nodes',
-            default=kw.get('nodes', 10), type=int,
-            help='Number of nodes to use.'
-        )
-        p.add_argument(
             '--samples', '-s', dest='samples',
             default=kw.get('samples', 30), type=int,
             help='Number of sample points to use.'

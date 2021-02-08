@@ -35,6 +35,11 @@ class SPINN1D(nn.Module):
     def setup_argparse(cls, parser, **kw):
         p = parser
         p.add_argument(
+            '--nodes', '-n', dest='nodes',
+            default=kw.get('nodes', 10), type=int,
+            help='Number of nodes to use.'
+        )
+        p.add_argument(
             '--fixed-h', dest='fixed_h', action='store_true', default=False,
             help='Use fixed width nodes.'
         )
