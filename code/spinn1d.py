@@ -29,7 +29,7 @@ class SPINN1D(nn.Module):
     @classmethod
     def from_args(cls, args):
         return cls(args.nodes, args.activation,
-                   fixed_h=args.fixed_h, use_pu=args.pu)
+                   fixed_h=args.fixed_h, use_pu=not args.no_pu)
 
     @classmethod
     def setup_argparse(cls, parser, **kw):
@@ -44,7 +44,7 @@ class SPINN1D(nn.Module):
             help='Use fixed width nodes.'
         )
         p.add_argument(
-            '--no-pu', dest='pu', action='store_false', default=True,
+            '--no-pu', dest='no_pu', action='store_true', default=False,
             help='Do not use a partition of unity.'
         )
 

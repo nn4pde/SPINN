@@ -107,6 +107,9 @@ class Case1D:
         plt.pause(0.01)
         return err
 
+    def show(self):
+        plt.show()
+
     def get_error(self, xn=None, pn=None):
         if xn is None and pn is None:
             xn, pn = self.get_plot_data()
@@ -231,7 +234,7 @@ class Solver:
         self.time_taken = time_taken
         print(f"Done. Took {time_taken:.3f} seconds.")
         if self.plot:
-            plt.show()
+            case.show()
 
     def save(self):
         dirname = self.out_dir
