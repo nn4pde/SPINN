@@ -53,7 +53,7 @@ class Case2D(Case1D):
         cond = ((x < xl) | (x > xr)) | ((y < xl) | (y > xr))
         xb, yb = (self._get_array(t) for t in (x[cond], y[cond]))
         self.points_b = (xb, yb)
-        self.ub_ex = self.deq.exact(xb, yb)
+        self.ub_ex = tensor(self.deq.exact(xb.cpu(), yb.cpu()))
         for t in (xs, ys, xb, yb):
             t.requires_grad = True
 
@@ -96,8 +96,8 @@ class Case2D(Case1D):
         Note this is always called *after* plot_solution.
         '''
         nn = self.nn
-        x = nn.layer1.x.detach().numpy()
-        y = nn.layer1.y.detach().numpy()
+        x = nn.layer1.x.detach().cpu().numpy()
+        y = nn.layer1.y.detach().cpu().numpy()
         if not self.plt2:
             self.plt2 = mlab.points3d(
                 x, y, np.zeros_like(x), scale_factor=0.025
@@ -108,9 +108,9 @@ class Case2D(Case1D):
     def get_plot_data(self):
         n = 2*self.ns
         x, y = (self._get_array(t) for t in np.mgrid[0:1:n*1j, 0:1:n*1j])
-        pn = self.nn(x, y).detach().numpy()
-        xn = x.numpy()
-        yn = y.numpy()
+        pn = self.nn(x, y).detach().cpu().numpy()
+        xn = x.cpu().numpy()
+        yn = y.cpu().numpy()
         yn.shape = xn.shape = pn.shape = (n, n)
         return xn, yn, pn
 

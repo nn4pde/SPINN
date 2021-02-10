@@ -100,8 +100,8 @@ class ConvCase(Case2D):
         Note this is always called *after* plot_solution.
         '''
         nn = self.nn
-        x = nn.points[:, 0].detach().numpy()
-        y = nn.points[:, 1].detach().numpy()
+        x = nn.points[:, 0].detach().cpu().numpy()
+        y = nn.points[:, 1].detach().cpu().numpy()
         if not self.plt2:
             self.plt2 = mlab.points3d(
                 x, y, np.zeros_like(x), scale_factor=0.025

@@ -62,7 +62,7 @@ class Case1D(Case):
         u, ux, uxx = self._compute_derivatives(u, xs)
         res = self.deq.ode(xs, u, ux, uxx)
         ub = u[[0, -1]]
-        ub_ex = self.deq.exact(tensor([0.0, 1.0]))
+        ub_ex = tensor(self.deq.exact(torch.Tensor([0.0, 1.0])))
         ns = len(xs)
 
         loss = (
@@ -74,8 +74,8 @@ class Case1D(Case):
     def get_plot_data(self):
         n = self.ns
         x = tensor(np.linspace(0.0, 1.0, n))
-        pn = self.nn(x).detach().numpy()
-        xn = x.numpy()
+        pn = self.nn(x).detach().cpu().numpy()
+        xn = x.cpu().numpy()
         return xn, pn
 
     def plot_solution(self):
