@@ -7,7 +7,7 @@ import torch
 import torch.autograd as ag
 import torch.nn as nn
 
-from common import Solver, Case, DiffEq
+from common import Solver, Case, DiffEq, device, tensor
 
 
 class Case1D(Case):
@@ -41,7 +41,7 @@ class Case1D(Case):
         self.plt1 = None
         self.plt2 = None  # For weights
         self.ns = ns
-        self.xs = torch.linspace(0, 1, ns, requires_grad=True)
+        self.xs = tensor(np.linspace(0, 1, ns), requires_grad=True)
 
     def _compute_derivatives(self, u, x):
         du = ag.grad(
@@ -62,7 +62,7 @@ class Case1D(Case):
         u, ux, uxx = self._compute_derivatives(u, xs)
         res = self.deq.ode(xs, u, ux, uxx)
         ub = u[[0, -1]]
-        ub_ex = self.deq.exact(torch.Tensor([0.0, 1.0]))
+        ub_ex = self.deq.exact(tensor([0.0, 1.0]))
         ns = len(xs)
 
         loss = (
@@ -73,7 +73,7 @@ class Case1D(Case):
 
     def get_plot_data(self):
         n = self.ns
-        x = torch.linspace(0.0, 1.0, n)
+        x = tensor(np.linspace(0.0, 1.0, n))
         pn = self.nn(x).detach().numpy()
         xn = x.numpy()
         return xn, pn
@@ -167,8 +167,8 @@ def gaussian(x):
 class SoftPlus:
     def __init__(self):
         self._sp = nn.Softplus()
-        self.k = torch.Tensor([1.0 + 2.0*np.log(2.0)])
-        self.fac = self._sp(torch.Tensor([1.0]))
+        self.k = tensor([1.0 + 2.0*np.log(2.0)])
+        self.fac = self._sp(tensor([1.0]))
 
     def __call__(self, x):
         sp = self._sp
@@ -206,8 +206,15 @@ def setup_argparse(*cls, **kw):
         description="Configurable options.",
         formatter_class=ArgumentDefaultsHelpFormatter
     )
+    p.add_argument(
+        '--gpu', dest='gpu', action='store_true',
+        default=kw.get('gpu', False),
+        help='Run code on the GPU.'
+    )
+
     for c in cls:
         c.setup_argparse(p, **kw)
+
     # Differential equation to solve.
     p.add_argument(
         '--de', dest='de', default=kw.get('de', 'sin8'),
@@ -236,6 +243,10 @@ def update_args(args):
     not strings.
 
     '''
+    if args.gpu:
+        device("cuda")
+    else:
+        device("cpu")
 
     activations = {
         'gaussian': lambda x: gaussian,
@@ -256,7 +267,8 @@ def main(nn_cls, case_cls, solver=Solver, **kw):
     args = parser.parse_args()
     update_args(args)
 
-    nn = nn_cls.from_args(args)
+    dev = device()
+    nn = nn_cls.from_args(args).to(dev)
     case = case_cls.from_args(nn, args)
     solver = Solver.from_args(case, args)
     solver.solve()

@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch_geometric.nn import MessagePassing
 from torch_geometric.nn import knn
 
-from twod import Case2D, main
+from twod import Case2D, main, tensor
 
 
 class SPHConv(MessagePassing):
@@ -68,16 +68,16 @@ class SPHNet(nn.Module):
 
         x = x.ravel()
         y = y.ravel()
-        pts = torch.zeros(self.n_nodes, 2)
-        pts[:, 0] = torch.Tensor(x)
-        pts[:, 1] = torch.Tensor(y)
+        pts = tensor(np.zeros((self.n_nodes, 2)))
+        pts[:, 0] = tensor(x)
+        pts[:, 1] = tensor(y)
         self.points = nn.Parameter(pts)
         if fixed_h:
-            self.h = nn.Parameter(torch.tensor(dx))
+            self.h = nn.Parameter(tensor(dx))
         else:
-            self.h = nn.Parameter(dx*torch.ones(self.n_nodes))
+            self.h = nn.Parameter(dx*tensor(np.ones(self.n_nodes)))
 
-        self.u = nn.Parameter(torch.zeros(self.n_nodes))
+        self.u = nn.Parameter(tensor(np.zeros(self.n_nodes)))
         self.sph = SPHConv(self.activation)
 
     def forward(self, x, y):

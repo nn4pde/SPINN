@@ -36,8 +36,10 @@ class SPINN2D(nn.Module):
         points = np.mgrid[0:1:n*1j, 0:1:n*1j]
         self.n_nodes = n*n
         self.layer1 = Shift2D(points, fixed_h=fixed_h)
-        self.layer2 = nn.Linear(self.n_nodes, 1, bias=False)
+        self.layer2 = nn.Linear(self.n_nodes, 1, bias=not use_pu)
         self.layer2.weight.data.fill_(0.0)
+        if not self.use_pu:
+            self.layer2.bias.data.fill_(0.0)
 
     def forward(self, x, y):
         x = x.unsqueeze(1)

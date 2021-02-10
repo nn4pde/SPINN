@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from oned import Case1D, main
+from oned import Case1D, main, tensor
 
 
 class Shift(nn.Module):
@@ -56,8 +56,10 @@ class SPINN1D(nn.Module):
         self.n = n
         self.activation = activation
         self.layer1 = Shift(n, fixed_h=fixed_h)
-        self.layer2 = nn.Linear(n, 1, bias=False)
+        self.layer2 = nn.Linear(n, 1, bias=not use_pu)
         self.layer2.weight.data.fill_(0.0)
+        if not self.use_pu:
+            self.layer2.bias.data.fill_(0.0)
 
     def forward(self, x):
         x = x.unsqueeze(1)
@@ -66,7 +68,7 @@ class SPINN1D(nn.Module):
         if self.use_pu:
             y1 = y.sum(axis=1).unsqueeze(1)
         else:
-            y1 = 1.0
+            y1 = tensor(1.0)
         y = self.layer2(y/y1)
         return y.squeeze()
 

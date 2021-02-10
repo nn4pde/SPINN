@@ -2,7 +2,28 @@ import os
 import time
 
 import numpy as np
+import torch
 import torch.optim as optim
+
+
+_device = torch.device("cpu")
+
+
+def device(dev=None):
+    '''Set/Get the device.
+    '''
+    global _device
+    if dev is None:
+        return _device
+    else:
+        _device = torch.device(dev)
+
+
+def tensor(x, **kw):
+    '''Returns a suitable device specific tensor.
+
+    '''
+    return torch.tensor(x, dtype=torch.float32, device=device(), **kw)
 
 
 class DiffEq:
