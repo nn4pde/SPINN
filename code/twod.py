@@ -1,5 +1,6 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 import os
+import sys
 from mayavi import mlab
 import numpy as np
 import torch
@@ -57,7 +58,7 @@ class Case2D(Case1D):
             t.requires_grad = True
 
     def _get_array(self, x):
-        return torch.tensor(x.ravel()).float().unsqueeze(1)
+        return torch.tensor(x.ravel()).float()
 
     def _compute_derivatives(self, u, xs, ys):
         du = ag.grad(
@@ -107,9 +108,9 @@ class Case2D(Case1D):
     def get_plot_data(self):
         n = 2*self.ns
         x, y = (self._get_array(t) for t in np.mgrid[0:1:n*1j, 0:1:n*1j])
-        pn = self.nn(x, y).detach().squeeze().numpy()
-        xn = x.squeeze().numpy()
-        yn = y.squeeze().numpy()
+        pn = self.nn(x, y).detach().numpy()
+        xn = x.numpy()
+        yn = y.numpy()
         yn.shape = xn.shape = pn.shape = (n, n)
         return xn, yn, pn
 
@@ -129,7 +130,8 @@ class Case2D(Case1D):
         err = self.plot_solution()
         self.plot_weights()
         mlab.process_ui_events()
-        self.plt1.scene._lift()
+        if sys.platform.startswith('linux'):
+            self.plt1.scene._lift()
         return err
 
     def show(self):

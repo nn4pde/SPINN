@@ -68,7 +68,7 @@ class SPINN1D(nn.Module):
         else:
             y1 = 1.0
         y = self.layer2(y/y1)
-        return y
+        return y.squeeze()
 
     def show(self):
         params = list(self.parameters())
@@ -80,7 +80,7 @@ class SPINN1D(nn.Module):
 
 class SPINNCase1D(Case1D):
     def plot_weights(self):
-        x = self.nn.layer1.center.detach().squeeze().numpy()
+        x = self.nn.layer1.center.detach().numpy()
         w = list(self.nn.layer2.parameters())[0].detach().squeeze().numpy()
         if not self.plt2:
             self.plt2, = plt.plot(x, np.zeros_like(x), 'o', label='centers')

@@ -24,6 +24,11 @@ class FDNet(nn.Module):
     def setup_argparse(cls, parser, **kw):
         p = parser
         p.add_argument(
+            '--nodes', '-n', dest='nodes',
+            default=kw.get('nodes', 10), type=int,
+            help='Number of nodes to use.'
+        )
+        p.add_argument(
             '--n-offset', dest='n_offset', type=int, default=3,
             help='Size of the kernel on each side of a point.'
         )

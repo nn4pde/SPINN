@@ -36,9 +36,12 @@ class SPINN2D(nn.Module):
         points = np.mgrid[0:1:n*1j, 0:1:n*1j]
         self.n_nodes = n*n
         self.layer1 = Shift2D(points, fixed_h=fixed_h)
-        self.layer2 = nn.Linear(self.n_nodes, 1)
+        self.layer2 = nn.Linear(self.n_nodes, 1, bias=False)
+        self.layer2.weight.data.fill_(0.0)
 
     def forward(self, x, y):
+        x = x.unsqueeze(1)
+        y = y.unsqueeze(1)
         xh, yh = self.layer1(x, y)
         z = self.activation(xh, yh)
         if self.use_pu:
@@ -46,7 +49,7 @@ class SPINN2D(nn.Module):
         else:
             zsum = 1.0
         z = self.layer2(z)
-        return z/zsum
+        return (z/zsum).squeeze()
 
 
 if __name__ == '__main__':

@@ -80,8 +80,8 @@ class Case1D:
     def get_plot_data(self):
         n = self.ns
         x = torch.linspace(0.0, 1.0, n)
-        pn = self.nn(x).detach().squeeze().numpy()
-        xn = x.squeeze().numpy()
+        pn = self.nn(x).detach().numpy()
+        xn = x.numpy()
         return xn, pn
 
     def plot_solution(self):
