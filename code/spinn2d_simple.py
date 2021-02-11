@@ -50,8 +50,8 @@ class SPINN2D(nn.Module):
             zsum = z.sum(axis=1).unsqueeze(1)
         else:
             zsum = 1.0
-        z = self.layer2(z)
-        return (z/zsum).squeeze()
+        z = self.layer2(z/zsum)
+        return z.squeeze()
 
 
 if __name__ == '__main__':
