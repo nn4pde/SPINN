@@ -7,10 +7,10 @@ import torch
 import torch.autograd as ag
 import torch.nn as nn
 
-from common import Solver, Case, DiffEq, device, tensor
+from common import Problem, Optimizer, DiffEq, device, tensor
 
 
-class Case1D(Case):
+class Problem1D(Problem):
 
     @classmethod
     def from_args(cls, nn, args):
@@ -19,7 +19,7 @@ class Case1D(Case):
     @classmethod
     def setup_argparse(cls, parser, **kw):
         p = parser
-        # Case options
+        # Problem options
         p.add_argument(
             '--samples', '-s', dest='samples',
             default=kw.get('samples', 30), type=int,
@@ -262,15 +262,15 @@ def update_args(args):
     args.de = des[args.de]()
 
 
-def main(nn_cls, case_cls, solver=Solver, **kw):
-    parser = setup_argparse(solver, nn_cls, case_cls, **kw)
+def main(nn_cls, problem_cls, optimizer=Optimizer, **kw):
+    parser = setup_argparse(optimizer, nn_cls, problem_cls, **kw)
     args = parser.parse_args()
     update_args(args)
 
     dev = device()
     nn = nn_cls.from_args(args).to(dev)
-    case = case_cls.from_args(nn, args)
-    solver = Solver.from_args(case, args)
+    p = problem_cls.from_args(nn, args)
+    solver = optimizer.from_args(p, args)
     solver.solve()
 
     if args.directory is not None:

@@ -34,7 +34,7 @@ class DiffEq:
         pass
 
 
-class Case:
+class Problem:
     @classmethod
     def from_args(cls, nn, args):
         pass
@@ -76,7 +76,7 @@ class Case:
         pass
 
 
-class Solver:
+class Optimizer:
     @classmethod
     def from_args(cls, case, args):
         optimizers = {'Adam': optim.Adam, 'LBFGS': optim.LBFGS}
@@ -119,21 +119,21 @@ class Solver:
             help='Output directory (output files are dumped here).'
         )
 
-    def __init__(self, case, n_train, n_skip=100, lr=1e-2, plot=True,
+    def __init__(self, problem, n_train, n_skip=100, lr=1e-2, plot=True,
                  out_dir=None, opt_class=optim.Adam):
         '''Initializer
 
         Parameters
         -----------
 
-        case: Case: The problem case being solved.
+        problem: Problem: The problem case being solved.
         n_train: int: Training steps
         n_skip: int: Print loss every so often.
         lr: float: Learming rate
         plot: bool: Plot live solution.
         out_dir: str: Output directory.
         '''
-        self.case = case
+        self.problem = problem
         self.opt_class = opt_class
         self.errors = []
         self.loss = []
@@ -147,30 +147,30 @@ class Solver:
     def closure(self):
         opt = self.opt
         opt.zero_grad()
-        loss = self.case.loss()
+        loss = self.problem.loss()
         loss.backward()
         self.loss.append(loss.item())
         return loss
 
     def solve(self):
-        case = self.case
+        problem = self.problem
         n_train = self.n_train
         n_skip = self.n_skip
-        opt = self.opt_class(case.nn.parameters(), lr=self.lr)
+        opt = self.opt_class(problem.nn.parameters(), lr=self.lr)
         self.opt = opt
         if self.plot:
-            case.plot()
+            problem.plot()
 
         start = time.perf_counter()
         for i in range(1, n_train+1):
             opt.step(self.closure)
             if i % n_skip == 0 or i == n_train:
-                loss = self.case.loss()
+                loss = self.problem.loss()
                 err = 0.0
                 if self.plot:
-                    err = case.plot()
+                    err = problem.plot()
                 else:
-                    err = case.get_error()
+                    err = problem.get_error()
                 self.errors.append(err)
                 print(
                     f"Iteration ({i}/{n_train}): Loss={loss:.3e}, " +
@@ -180,7 +180,7 @@ class Solver:
         self.time_taken = time_taken
         print(f"Done. Took {time_taken:.3f} seconds.")
         if self.plot:
-            case.show()
+            problem.show()
 
     def save(self):
         dirname = self.out_dir
@@ -195,4 +195,4 @@ class Solver:
             fname, loss=self.loss, error=self.errors,
             time_taken=self.time_taken
         )
-        self.case.save(dirname)
+        self.problem.save(dirname)

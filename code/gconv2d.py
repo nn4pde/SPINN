@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch_geometric.nn import MessagePassing
 from torch_geometric.nn import knn
 
-from twod import Case2D, main, tensor
+from twod import Problem2D, main, tensor
 
 
 class SPHConv(MessagePassing):
@@ -93,7 +93,7 @@ class SPHNet(nn.Module):
         return nr/dnr
 
 
-class ConvCase(Case2D):
+class ConvProblem(Problem2D):
 
     def plot_weights(self):
         '''Implement this method to plot any weights.
@@ -111,4 +111,4 @@ class ConvCase(Case2D):
 
 
 if __name__ == '__main__':
-    main(SPHNet, ConvCase, nodes=40, samples=120, lr=1e-2)
+    main(SPHNet, ConvProblem, nodes=40, samples=120, lr=1e-2)

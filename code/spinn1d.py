@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from oned import Case1D, main, tensor
+from oned import Problem1D, main, tensor
 
 
 class Shift(nn.Module):
@@ -80,7 +80,7 @@ class SPINN1D(nn.Module):
         print("Output bias: ", params[3])
 
 
-class SPINNCase1D(Case1D):
+class SPINNProblem1D(Problem1D):
     def plot_weights(self):
         x = self.nn.layer1.center.detach().cpu().numpy()
         param = list(self.nn.layer2.parameters())[0]
@@ -94,4 +94,4 @@ class SPINNCase1D(Case1D):
 
 
 if __name__ == '__main__':
-    main(SPINN1D, SPINNCase1D, nodes=20, samples=80, lr=1e-2)
+    main(SPINN1D, SPINNProblem1D, nodes=20, samples=80, lr=1e-2)

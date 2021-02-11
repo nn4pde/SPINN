@@ -11,7 +11,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from oned import Case1D, main
+from oned import Problem1D, main
 
 
 class FDNet(nn.Module):
@@ -74,7 +74,7 @@ class FDNet(nn.Module):
         return y*factor/y1
 
 
-class FDCase(Case1D):
+class FDProblem(Problem1D):
     def plot_weights(self):
         x = self.nn.x
         if not self.plt2:
@@ -86,4 +86,4 @@ class FDCase(Case1D):
 
 
 if __name__ == '__main__':
-    main(FDNet, FDCase, nodes=20, samples=60, lr=1e-2)
+    main(FDNet, FDProblem, nodes=20, samples=60, lr=1e-2)

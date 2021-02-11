@@ -1,7 +1,7 @@
 import numpy as np
 import torch.nn as nn
 
-from twod import Case2D, Shift2D, main
+from twod import Problem2D, Shift2D, main
 
 
 class SPINN2D(nn.Module):
@@ -55,4 +55,4 @@ class SPINN2D(nn.Module):
 
 
 if __name__ == '__main__':
-    main(SPINN2D, Case2D, nodes=40, samples=120, lr=1e-2)
+    main(SPINN2D, Problem2D, nodes=40, samples=120, lr=1e-2)
