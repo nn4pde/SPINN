@@ -7,41 +7,91 @@ import torch
 import torch.autograd as ag
 import torch.nn as nn
 
-from common import Problem, Optimizer, DiffEq, device, tensor
+from common import Problem, Optimizer, Domain, device, tensor
 
 
-class Problem1D(Problem):
-
+class RegularDomain(Domain):
     @classmethod
-    def from_args(cls, nn, args):
-        return cls(nn, args.de, args.samples)
+    def from_args(cls, args):
+        return cls(args.nodes, args.samples)
 
     @classmethod
     def setup_argparse(cls, parser, **kw):
         p = parser
-        # Problem options
+        p.add_argument(
+            '--nodes', '-n', dest='nodes',
+            default=kw.get('nodes', 10), type=int,
+            help='Number of nodes to use.'
+        )
         p.add_argument(
             '--samples', '-s', dest='samples',
             default=kw.get('samples', 30), type=int,
             help='Number of sample points to use.'
         )
 
-    def __init__(self, nn, deq, ns):
+    def __init__(self, n, ns):
+        self.n = n
+        self.ns = ns
+        dxb2 = 0.5/(n + 1)
+        self.xn = np.linspace(dxb2, 1.0 - dxb2, n)
+        dxb2 = 0.5/(ns + 1)
+        self.xs = tensor(np.linspace(dxb2, 1-dxb2, ns), requires_grad=True)
+        self.xbn = np.array([0.0, 1.0])
+        self.xb = tensor(self.xbn)
+
+    def nodes(self):
+        return self.xn
+
+    def fixed_nodes(self):
+        return self.xbn
+
+    def interior(self):
+        return self.xs
+
+    def boundary(self):
+        return self.xb
+
+    def plot_points(self):
+        n = self.ns*2
+        x = tensor(np.linspace(0.0, 1.0, n))
+        return x
+
+    def eval_bc(self, problem):
+        u = problem.nn(self.boundary())
+        ub = tensor(problem.exact(self.xbn))
+        return u - ub
+
+
+class Problem1D(Problem):
+
+    @classmethod
+    def from_args(cls, domain, nn, args):
+        return cls(domain, nn, args.de)
+
+    @classmethod
+    def setup_argparse(cls, parser, **kw):
+        p = parser
+        p.add_argument(
+            '--de', dest='de', default=kw.get('de', 'sin8'),
+            choices=['sin8', 'pulse', 'simple'],
+            help='Differential equation to solve.'
+        )
+
+    def __init__(self, domain, nn, deq):
         '''Initializer
 
         Parameters
         -----------
 
+        domain: Domain: object managing the domain.
         nn: Neural network for the solution
         eq: DiffEq: Differential equation to evaluate.
-        ns: int: number of sample points.
         '''
+        self.domain = domain
         self.nn = nn
         self.deq = deq
         self.plt1 = None
         self.plt2 = None  # For weights
-        self.ns = ns
-        self.xs = tensor(np.linspace(0, 1, ns), requires_grad=True)
 
     def _compute_derivatives(self, u, x):
         du = ag.grad(
@@ -56,24 +106,43 @@ class Problem1D(Problem):
         return u, du[0], d2u[0]
 
     def loss(self):
+        domain = self.domain
         nn = self.nn
-        xs = self.xs
+        xs = domain.interior()
         u = nn(xs)
         u, ux, uxx = self._compute_derivatives(u, xs)
-        res = self.deq.ode(xs, u, ux, uxx)
-        ub = u[[0, -1]]
-        ub_ex = tensor(self.deq.exact(torch.Tensor([0.0, 1.0])))
+        res = self.pde(xs, u, ux, uxx)
+        bc = domain.eval_bc(self)
+        bc_loss = (bc**2).sum()
         ns = len(xs)
-
         loss = (
-            (res**2).sum()/ns
-            + ((ub - ub_ex)**2).sum()*ns
+            (res**2).mean()
+            + bc_loss*ns
         )
         return loss
 
+    def get_error(self, xn=None, pn=None):
+        if xn is None and pn is None:
+            xn, pn = self.get_plot_data()
+        yn = self.exact(xn)
+        umax = max(np.abs(yn))
+        diff = np.abs(yn - pn)
+        return diff.mean()/umax
+
+    def save(self, dirname):
+        '''Save the model and results.
+
+        '''
+        modelfname = os.path.join(dirname, 'model.pt')
+        torch.save(self.nn.state_dict(), modelfname)
+        rfile = os.path.join(dirname, 'results.npz')
+        x, y = self.get_plot_data()
+        y_exact = self.exact(x)
+        np.savez(rfile, x=x, y=y, y_exact=y_exact)
+
+    # Plotting methods
     def get_plot_data(self):
-        n = self.ns
-        x = tensor(np.linspace(0.0, 1.0, n))
+        x = self.domain.plot_points()
         pn = self.nn(x).detach().cpu().numpy()
         xn = x.cpu().numpy()
         return xn, pn
@@ -81,10 +150,10 @@ class Problem1D(Problem):
     def plot_solution(self):
         xn, pn = self.get_plot_data()
         if self.plt1 is None:
-            yn = self.deq.exact(xn)
+            yn = self.exact(xn)
             lines, = plt.plot(xn, pn, '-', label='computed')
             self.plt1 = lines
-            plt.plot(xn, self.deq.exact(xn), label='exact')
+            plt.plot(xn, yn, label='exact')
             plt.grid()
             plt.xlim(-0.1, 1.1)
             ymax, ymin = np.max(yn), np.min(yn)
@@ -104,58 +173,27 @@ class Problem1D(Problem):
     def show(self):
         plt.show()
 
-    def get_error(self, xn=None, pn=None):
-        if xn is None and pn is None:
-            xn, pn = self.get_plot_data()
-        yn = self.deq.exact(xn)
-        umax = max(np.abs(yn))
-        diff = np.abs(yn - pn)
-        return diff.mean()/umax
+    # ####### Override these for different differential equations
+    def pde(self, x, u, ux, uxx):
+        if self.deq == 'pulse':
+            K = 0.01
+            f = -(K*(-6*x + 4/3.) +
+                  x*(2*x - 2./3)**2)*torch.exp(-(x - 1/3.)**2/K)/K**2
+            return uxx + f
+        elif self.deq == 'sin8':
+            return uxx + torch.sin(8.0*np.pi*x)
+        elif self.deq == 'simple':
+            return uxx + 1.0
 
-    def save(self, dirname):
-        '''Save the model and results.
-
-        '''
-        modelfname = os.path.join(dirname, 'model.pt')
-        torch.save(self.nn.state_dict(), modelfname)
-        rfile = os.path.join(dirname, 'results.npz')
-        x, y = self.get_plot_data()
-        y_exact = self.deq.exact(x)
-        np.savez(rfile, x=x, y=y, y_exact=y_exact)
-
-
-class Pulse1D(DiffEq):
-    def __init__(self, K=0.01):
-        self.K = K
-
-    def ode(self, x, u, ux, uxx):
-        K = self.K
-        f = -(K*(-6*x + 4/3.) +
-              x*(2*x - 2./3)**2)*torch.exp(-(x - 1/3.)**2/K)/K**2
-        return uxx + f
-
-    def exact(self, *args):
-        x = args[0]
-        K = self.K
-        return x*(np.exp(-((x - (1.0/3.0))**2)/K) - np.exp(-4.0/(9.0*K)))
-
-
-class Sin8(DiffEq):
-    def ode(self, x, u, ux, uxx):
-        return uxx + torch.sin(8.0*np.pi*x)
-
-    def exact(self, *args):
-        x = args[0]
-        return np.sin(8.0*np.pi*x)/(64.0*np.pi**2)
-
-
-class Simple(DiffEq):
-    def ode(self, x, u, ux, uxx):
-        return uxx + 1.0
-
-    def exact(self, *args):
-        x = args[0]
-        return 0.5*x*(1.0 - x)
+    def exact(self, x):
+        if self.deq == 'pulse':
+            K = 0.01
+            return x*(np.exp(-((x - (1.0/3.0))**2)/K) -
+                      np.exp(-4.0/(9.0*K)))
+        elif self.deq == 'sin8':
+            return np.sin(8.0*np.pi*x)/(64.0*np.pi**2)
+        elif self.deq == 'simple':
+            return 0.5*x*(1.0 - x)
 
 
 # Activation functions
@@ -197,81 +235,80 @@ class Kernel(nn.Module):
         return x
 
 
-def setup_argparse(*cls, **kw):
-    '''Setup the argument parser.
+class App1D:
+    def __init__(self, problem_cls, nn_cls, domain_cls,
+                 optimizer=Optimizer):
+        self.problem_cls = problem_cls
+        self.nn_cls = nn_cls
+        self.domain_cls = domain_cls
+        self.optimizer = optimizer
 
-    Any keyword arguments are used as the default values for the parameters.
-    '''
-    p = ArgumentParser(
-        description="Configurable options.",
-        formatter_class=ArgumentDefaultsHelpFormatter
-    )
-    p.add_argument(
-        '--gpu', dest='gpu', action='store_true',
-        default=kw.get('gpu', False),
-        help='Run code on the GPU.'
-    )
+    def setup_argparse(self, **kw):
+        '''Setup the argument parser.
 
-    for c in cls:
-        c.setup_argparse(p, **kw)
+        Any keyword arguments are used as the default values for the
+        parameters.
+        '''
+        p = ArgumentParser(
+            description="Configurable options.",
+            formatter_class=ArgumentDefaultsHelpFormatter
+        )
+        p.add_argument(
+            '--gpu', dest='gpu', action='store_true',
+            default=kw.get('gpu', False),
+            help='Run code on the GPU.'
+        )
+        classes = (
+            self.domain_cls, self.problem_cls, self.nn_cls, self.optimizer
+        )
+        for c in classes:
+            c.setup_argparse(p, **kw)
 
-    # Differential equation to solve.
-    p.add_argument(
-        '--de', dest='de', default=kw.get('de', 'sin8'),
-        choices=['sin8', 'pulse', 'simple'],
-        help='Differential equation to solve.'
-    )
-    p.add_argument(
-        '--activation', '-a', dest='activation',
-        default=kw.get('activation', 'gaussian'),
-        choices=['gaussian', 'softplus', 'tanh', 'kernel'],
-        help='Select the activation function for particles.'
-    )
-    p.add_argument(
-        '--kernel-size', dest='kernel_size',
-        default=kw.get('kernel_size', 5), type=int,
-        help='Activation kernel size (in place of a Gaussian).'
-    )
+        # Differential equation to solve.
+        p.add_argument(
+            '--activation', '-a', dest='activation',
+            default=kw.get('activation', 'gaussian'),
+            choices=['gaussian', 'softplus', 'tanh', 'kernel'],
+            help='Select the activation function for particles.'
+        )
+        p.add_argument(
+            '--kernel-size', dest='kernel_size',
+            default=kw.get('kernel_size', 5), type=int,
+            help='Activation kernel size (in place of a Gaussian).'
+        )
 
-    return p
+        return p
 
+    def _get_activation(self, args):
+        activations = {
+            'gaussian': lambda x: gaussian,
+            'tanh': lambda x: tanh,
+            'softplus': lambda x: SoftPlus(),
+            'kernel': Kernel
+        }
+        return activations[args.activation](args.kernel_size)
 
-def update_args(args):
-    '''Updates objects in args as per options selected
+    def run(self, **kw):
+        parser = self.setup_argparse(**kw)
+        args = parser.parse_args()
 
-    This will change the args so that the values are appropriate objects and
-    not strings.
+        if args.gpu:
+            device("cuda")
+        else:
+            device("cpu")
 
-    '''
-    if args.gpu:
-        device("cuda")
-    else:
-        device("cpu")
+        activation = self._get_activation(args)
 
-    activations = {
-        'gaussian': lambda x: gaussian,
-        'tanh': lambda x: tanh,
-        'softplus': lambda x: SoftPlus(),
-        'kernel': Kernel
-    }
-    args.activation = activations[args.activation](args.kernel_size)
+        dev = device()
+        dom = self.domain_cls.from_args(args)
+        self.domain = dom
+        nn = self.nn_cls.from_args(dom, activation, args).to(dev)
+        self.nn = nn
+        p = self.problem_cls.from_args(dom, nn, args)
+        self.problem = p
+        solver = self.optimizer.from_args(p, args)
+        self.solver = solver
+        solver.solve()
 
-    des = {
-        'sin8': Sin8, 'simple': Simple, 'pulse': Pulse1D
-    }
-    args.de = des[args.de]()
-
-
-def main(nn_cls, problem_cls, optimizer=Optimizer, **kw):
-    parser = setup_argparse(optimizer, nn_cls, problem_cls, **kw)
-    args = parser.parse_args()
-    update_args(args)
-
-    dev = device()
-    nn = nn_cls.from_args(args).to(dev)
-    p = problem_cls.from_args(nn, args)
-    solver = optimizer.from_args(p, args)
-    solver.solve()
-
-    if args.directory is not None:
-        solver.save(args.directory)
+        if args.directory is not None:
+            solver.save(args.directory)

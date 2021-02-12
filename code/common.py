@@ -26,6 +26,34 @@ def tensor(x, **kw):
     return torch.tensor(x, dtype=torch.float32, device=device(), **kw)
 
 
+class Domain:
+    @classmethod
+    def from_args(cls, args):
+        pass
+
+    @classmethod
+    def setup_argparse(cls, parser, **kw):
+        pass
+
+    def nodes(self):
+        pass
+
+    def fixed_nodes(self):
+        pass
+
+    def interior(self):
+        pass
+
+    def boundary(self):
+        pass
+
+    def plot_points(self):
+        pass
+
+    def eval_bc(self, problem):
+        pass
+
+
 class DiffEq:
     def ode(self, x, u, ux, uxx):
         pass
@@ -73,6 +101,12 @@ class Problem:
         pass
 
     def show(self):
+        pass
+
+    def pde(self, *args):
+        pass
+
+    def exact(self, *args):
         pass
 
 
