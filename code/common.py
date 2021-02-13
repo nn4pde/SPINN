@@ -54,14 +54,6 @@ class Domain:
         pass
 
 
-class DiffEq:
-    def ode(self, x, u, ux, uxx):
-        pass
-
-    def exact(self, *args):
-        pass
-
-
 class Problem:
     @classmethod
     def from_args(cls, nn, args):

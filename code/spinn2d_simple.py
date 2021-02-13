@@ -1,23 +1,17 @@
-import numpy as np
 import torch.nn as nn
 
-from twod import Problem2D, Shift2D, main
+from twod import RegularDomain, App2D, Problem2D, Shift2D
 
 
 class SPINN2D(nn.Module):
     @classmethod
-    def from_args(cls, args):
-        return cls(args.nodes, args.activation,
+    def from_args(cls, domain, activation, args):
+        return cls(domain, activation,
                    fixed_h=args.fixed_h, use_pu=not args.no_pu)
 
     @classmethod
     def setup_argparse(cls, parser, **kw):
         p = parser
-        p.add_argument(
-            '--nodes', '-n', dest='nodes',
-            default=kw.get('nodes', 25), type=int,
-            help='Number of nodes to use.'
-        )
         p.add_argument(
             '--fixed-h', dest='fixed_h', action='store_true', default=False,
             help='Use fixed width nodes.'
@@ -27,16 +21,15 @@ class SPINN2D(nn.Module):
             help='Do not use a partition of unity.'
         )
 
-    def __init__(self, n_nodes, activation, fixed_h=False, use_pu=True):
+    def __init__(self, domain, activation, fixed_h=False, use_pu=True):
         super().__init__()
 
         self.activation = activation
         self.use_pu = use_pu
-        n = round(np.sqrt(n_nodes) + 0.49)
-        points = np.mgrid[0:1:n*1j, 0:1:n*1j]
-        self.n_nodes = n*n
-        self.layer1 = Shift2D(points, fixed_h=fixed_h)
-        self.layer2 = nn.Linear(self.n_nodes, 1, bias=not use_pu)
+        self.layer1 = Shift2D(domain.nodes(), domain.fixed_nodes(),
+                              fixed_h=fixed_h)
+        n = self.layer1.n
+        self.layer2 = nn.Linear(n, 1, bias=not use_pu)
         self.layer2.weight.data.fill_(0.0)
         if not self.use_pu:
             self.layer2.bias.data.fill_(0.0)
@@ -53,6 +46,19 @@ class SPINN2D(nn.Module):
         z = self.layer2(z/zsum)
         return z.squeeze()
 
+    def centers(self):
+        return self.layer1.centers()
+
+    def widths(self):
+        return self.layer1.widths()
+
+    def weights(self):
+        return self.layer2.weight
+
 
 if __name__ == '__main__':
-    main(SPINN2D, Problem2D, nodes=40, samples=120, lr=1e-2)
+    app = App2D(
+        problem_cls=Problem2D, nn_cls=SPINN2D,
+        domain_cls=RegularDomain
+    )
+    app.run(nodes=40, samples=120, lr=1e-2)

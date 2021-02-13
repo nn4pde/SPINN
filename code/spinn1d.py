@@ -82,6 +82,9 @@ class SPINN1D(nn.Module):
     def centers(self):
         return self.layer1.centers()
 
+    def widths(self):
+        return self.layer1.h
+
     def weights(self):
         return self.layer2.weight
 

@@ -264,6 +264,10 @@ class App1D:
         for c in classes:
             c.setup_argparse(p, **kw)
 
+        self._setup_activation_options(p)
+        return p
+
+    def _setup_activation_options(self, p, **kw):
         # Differential equation to solve.
         p.add_argument(
             '--activation', '-a', dest='activation',
@@ -276,8 +280,6 @@ class App1D:
             default=kw.get('kernel_size', 5), type=int,
             help='Activation kernel size (in place of a Gaussian).'
         )
-
-        return p
 
     def _get_activation(self, args):
         activations = {

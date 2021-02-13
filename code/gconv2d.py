@@ -1,12 +1,11 @@
 import numpy as np
-from mayavi import mlab
 import torch
 import torch.nn as nn
 
 from torch_geometric.nn import MessagePassing
 from torch_geometric.nn import knn
 
-from twod import Problem2D, main, tensor
+from twod import App2D, Problem2D, RegularDomain, tensor
 
 
 class SPHConv(MessagePassing):
@@ -29,18 +28,13 @@ class SPHConv(MessagePassing):
 
 class SPHNet(nn.Module):
     @classmethod
-    def from_args(cls, args):
-        return cls(args.nodes, args.activation, fixed_h=args.fixed_h,
+    def from_args(cls, domain, activation, args):
+        return cls(domain, activation, fixed_h=args.fixed_h,
                    use_pu=not args.no_pu, max_nbrs=args.max_nbrs)
 
     @classmethod
     def setup_argparse(cls, parser, **kw):
         p = parser
-        p.add_argument(
-            '--nodes', '-n', dest='nodes',
-            default=kw.get('nodes', 25), type=int,
-            help='Number of nodes to use.'
-        )
         p.add_argument(
             '--fixed-h', dest='fixed_h', action='store_true', default=False,
             help='Use fixed width nodes.'
@@ -55,60 +49,67 @@ class SPHNet(nn.Module):
             help='Maximum number of neighbors to use.'
         )
 
-    def __init__(self, n_nodes, activation,
+    def __init__(self, domain, activation,
                  fixed_h=False, use_pu=True, max_nbrs=25):
         super().__init__()
         self.activation = activation
         self.use_pu = use_pu
         self.max_nbrs = max_nbrs
-        n = round(np.sqrt(n_nodes) + 0.49)
-        x, y = np.mgrid[0:1:n*1j, 0:1:n*1j]
-        self.n_nodes = n_nodes = n*n
-        self.dx = dx = 1.0/n
+        points = domain.nodes()
+        fixed_points = domain.fixed_nodes()
+        n_free = len(points[0])
+        n_fixed = len(fixed_points[0])
+        self.n = n = n_free + n_fixed
+        if n_fixed:
+            dsize = np.ptp(np.hstack((points[0], fixed_points[0])))
+        else:
+            dsize = np.ptp(points[0])
+        dx = dsize/np.sqrt(n)
+        self.dx = dx
 
-        x = x.ravel()
-        y = y.ravel()
-        pts = tensor(np.zeros((self.n_nodes, 2)))
-        pts[:, 0] = tensor(x)
-        pts[:, 1] = tensor(y)
+        pts = tensor(np.zeros((n_free, 2)))
+        pts[:, 0] = tensor(points[0])
+        pts[:, 1] = tensor(points[1])
         self.points = nn.Parameter(pts)
+        fpts = tensor(np.zeros((n_fixed, 2)))
+        fpts[:, 0] = tensor(fixed_points[0])
+        fpts[:, 1] = tensor(fixed_points[1])
+        self.f_points = fpts
         if fixed_h:
             self.h = nn.Parameter(tensor(dx))
         else:
-            self.h = nn.Parameter(dx*tensor(np.ones(self.n_nodes)))
+            self.h = nn.Parameter(dx*tensor(np.ones(self.n)))
 
-        self.u = nn.Parameter(tensor(np.zeros(self.n_nodes)))
+        self.u = nn.Parameter(tensor(np.zeros(self.n)))
         self.sph = SPHConv(self.activation)
 
     def forward(self, x, y):
         target = torch.stack((x, y), dim=1)
-        a_index = knn(self.points, target, self.max_nbrs)
+        nodes = torch.vstack((self.points, self.f_points))
+        a_index = knn(nodes, target, self.max_nbrs)
         if self.use_pu:
-            dnr = self.sph.forward(x, y, self.points,
+            dnr = self.sph.forward(x, y, nodes,
                                    self.h, 1.0, a_index)
         else:
             dnr = 1.0
-        nr = self.sph.forward(x, y, self.points,
+        nr = self.sph.forward(x, y, nodes,
                               self.h, self.u, a_index)
         return nr/dnr
 
+    def centers(self):
+        nodes = torch.vstack((self.points, self.f_points))
+        return nodes.T
 
-class ConvProblem(Problem2D):
+    def widths(self):
+        return self.h
 
-    def plot_weights(self):
-        '''Implement this method to plot any weights.
-        Note this is always called *after* plot_solution.
-        '''
-        nn = self.nn
-        x = nn.points[:, 0].detach().cpu().numpy()
-        y = nn.points[:, 1].detach().cpu().numpy()
-        if not self.plt2:
-            self.plt2 = mlab.points3d(
-                x, y, np.zeros_like(x), scale_factor=0.025
-            )
-        else:
-            self.plt2.mlab_source.trait_set(x=x, y=y)
+    def weights(self):
+        return self.u
 
 
 if __name__ == '__main__':
-    main(SPHNet, ConvProblem, nodes=40, samples=120, lr=1e-2)
+    app = App2D(
+        problem_cls=Problem2D, nn_cls=SPHNet,
+        domain_cls=RegularDomain
+    )
+    app.run(nodes=40, samples=120, lr=1e-2)
