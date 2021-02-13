@@ -45,7 +45,7 @@ class SPHNet(nn.Module):
         )
         p.add_argument(
             '--max-nbrs', dest='max_nbrs', type=int,
-            default=kw.get('max_nbrs', 25),
+            default=kw.get('max_nbrs', 49),
             help='Maximum number of neighbors to use.'
         )
 
@@ -75,6 +75,7 @@ class SPHNet(nn.Module):
         fpts[:, 0] = tensor(fixed_points[0])
         fpts[:, 1] = tensor(fixed_points[1])
         self.f_points = fpts
+        self.fixed_h = fixed_h
         if fixed_h:
             self.h = nn.Parameter(tensor(dx))
         else:
@@ -87,13 +88,14 @@ class SPHNet(nn.Module):
         target = torch.stack((x, y), dim=1)
         nodes = torch.vstack((self.points, self.f_points))
         a_index = knn(nodes, target, self.max_nbrs)
+        h = self.widths()
         if self.use_pu:
             dnr = self.sph.forward(x, y, nodes,
-                                   self.h, 1.0, a_index)
+                                   h, 1.0, a_index)
         else:
             dnr = 1.0
         nr = self.sph.forward(x, y, nodes,
-                              self.h, self.u, a_index)
+                              h, self.u, a_index)
         return nr/dnr
 
     def centers(self):
@@ -101,7 +103,10 @@ class SPHNet(nn.Module):
         return nodes.T
 
     def widths(self):
-        return self.h
+        if self.fixed_h:
+            return self.h*torch.ones_like(self.u)
+        else:
+            return self.h
 
     def weights(self):
         return self.u

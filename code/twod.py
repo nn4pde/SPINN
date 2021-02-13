@@ -199,14 +199,17 @@ class Problem2D(Problem1D):
         '''
         nn = self.nn
         x, y = nn.centers()
+        h = nn.widths().detach().cpu().numpy()
         x = x.detach().cpu().numpy()
         y = y.detach().cpu().numpy()
         if not self.plt2:
             self.plt2 = mlab.points3d(
-                x, y, np.zeros_like(x), scale_factor=0.025
+                x, y, np.zeros_like(x), h, mode='2dcircle',
+                scale_factor=1.0
             )
+            self.plt2.glyph.glyph_source.glyph_source.resolution = 20
         else:
-            self.plt2.mlab_source.trait_set(x=x, y=y)
+            self.plt2.mlab_source.trait_set(x=x, y=y, scalars=h)
 
     def plot_solution(self):
         xn, yn, pn = self.get_plot_data()
@@ -215,6 +218,7 @@ class Problem2D(Problem1D):
             mlab.figure(size=(700, 700))
             mlab.surf(xn, yn, un, representation='wireframe')
             self.plt1 = mlab.surf(xn, yn, pn, opacity=0.8)
+            #self.plt1.actor.property.edge_visibility = True
             mlab.colorbar()
         else:
             self.plt1.mlab_source.scalars = pn
@@ -272,6 +276,7 @@ class Shift2D(nn.Module):
         self.xf = tensor(fp[0])
         self.yf = tensor(fp[1])
 
+        self.fixed_h = fixed_h
         if fixed_h:
             self.h = nn.Parameter(tensor(dx))
         else:
@@ -281,7 +286,10 @@ class Shift2D(nn.Module):
         return torch.cat((self.x, self.xf)), torch.cat((self.y, self.yf))
 
     def widths(self):
-        return self.h
+        if self.fixed_h:
+            return self.h*torch.ones(self.n)
+        else:
+            return self.h
 
     def forward(self, x, y):
         xc, yc = self.centers()
