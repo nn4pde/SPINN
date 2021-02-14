@@ -219,7 +219,7 @@ class Problem2D(Problem1D):
             mlab.surf(xn, yn, un, representation='wireframe')
             self.plt1 = mlab.surf(xn, yn, pn, opacity=0.8)
             #self.plt1.actor.property.edge_visibility = True
-            mlab.colorbar()
+            mlab.colorbar(self.plt1)
         else:
             self.plt1.mlab_source.scalars = pn
         return self.get_error(xn, yn, pn)
