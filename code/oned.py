@@ -210,7 +210,7 @@ class SoftPlus:
 
     def __call__(self, x):
         sp = self._sp
-        return sp(self.k - sp(x) - sp(-x))*self.fac
+        return sp(self.k - sp(x) - sp(-x))/self.fac
 
 
 tanh = torch.tanh
