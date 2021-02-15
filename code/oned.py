@@ -53,7 +53,7 @@ class RegularDomain(Domain):
 
     def plot_points(self):
         n = self.ns*2
-        x = tensor(np.linspace(0.0, 1.0, n))
+        x = np.linspace(0.0, 1.0, n)
         return x
 
     def eval_bc(self, problem):
@@ -122,6 +122,9 @@ class Problem1D(Problem):
         return loss
 
     def get_error(self, xn=None, pn=None):
+        if not self.has_exact():
+            return 0.0
+
         if xn is None and pn is None:
             xn, pn = self.get_plot_data()
         yn = self.exact(xn)
@@ -143,9 +146,9 @@ class Problem1D(Problem):
     # Plotting methods
     def get_plot_data(self):
         x = self.domain.plot_points()
-        pn = self.nn(x).detach().cpu().numpy()
-        xn = x.cpu().numpy()
-        return xn, pn
+        xt = tensor(x)
+        pn = self.nn(xt).detach().cpu().numpy()
+        return x, pn
 
     def plot_solution(self):
         xn, pn = self.get_plot_data()
@@ -153,7 +156,8 @@ class Problem1D(Problem):
             yn = self.exact(xn)
             lines, = plt.plot(xn, pn, '-', label='computed')
             self.plt1 = lines
-            plt.plot(xn, yn, label='exact')
+            if self.has_exact():
+                plt.plot(xn, yn, label='exact')
             plt.grid()
             plt.xlim(-0.1, 1.1)
             ymax, ymin = np.max(yn), np.min(yn)
@@ -290,9 +294,9 @@ class App1D:
         }
         return activations[args.activation](args.kernel_size)
 
-    def run(self, **kw):
+    def run(self, args=None, **kw):
         parser = self.setup_argparse(**kw)
-        args = parser.parse_args()
+        args = parser.parse_args(args)
 
         if args.gpu:
             device("cuda")

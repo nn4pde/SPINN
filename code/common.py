@@ -101,6 +101,9 @@ class Problem:
     def exact(self, *args):
         pass
 
+    def has_exact(self):
+        return True
+
 
 class Optimizer:
     @classmethod
@@ -198,10 +201,11 @@ class Optimizer:
                 else:
                     err = problem.get_error()
                 self.errors.append(err)
-                print(
-                    f"Iteration ({i}/{n_train}): Loss={loss:.3e}, " +
-                    f"error={err:.3e}"
-                )
+                if problem.has_exact():
+                    e_str = f", error={err:.3e}"
+                else:
+                    e_str = ''
+                print(f"Iteration ({i}/{n_train}): Loss={loss:.3e}" + e_str)
         time_taken = time.perf_counter() - start
         self.time_taken = time_taken
         print(f"Done. Took {time_taken:.3f} seconds.")

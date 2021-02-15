@@ -96,7 +96,7 @@ class RegularDomain(Domain):
 
     def plot_points(self):
         n = self.ns*2
-        x, y = (tensor(t.ravel()) for t in np.mgrid[0:1:n*1j, 0:1:n*1j])
+        x, y = np.mgrid[0:1:n*1j, 0:1:n*1j]
         return x, y
 
     def eval_bc(self, problem):
@@ -165,6 +165,8 @@ class Problem2D(Problem1D):
         return loss
 
     def get_error(self, xn=None, yn=None, pn=None):
+        if not self.has_exact():
+            return 0.0
         if xn is None and pn is None:
             xn, yn, pn = self.get_plot_data()
         un = self.exact(xn, yn)
@@ -186,12 +188,10 @@ class Problem2D(Problem1D):
     # Plotting methods
     def get_plot_data(self):
         x, y = self.domain.plot_points()
-        pn = self.nn(x, y).detach().cpu().numpy()
-        xn = x.cpu().numpy()
-        yn = y.cpu().numpy()
-        n = int(np.sqrt(len(x)))
-        yn.shape = xn.shape = pn.shape = (n, n)
-        return xn, yn, pn
+        xt, yt = tensor(x.ravel()), tensor(y.ravel())
+        pn = self.nn(xt, yt).detach().cpu().numpy()
+        pn.shape = x.shape
+        return x, y, pn
 
     def plot_weights(self):
         '''Implement this method to plot any weights.
@@ -214,11 +214,11 @@ class Problem2D(Problem1D):
     def plot_solution(self):
         xn, yn, pn = self.get_plot_data()
         if self.plt1 is None:
-            un = self.exact(xn, yn)
             mlab.figure(size=(700, 700))
-            mlab.surf(xn, yn, un, representation='wireframe')
+            if self.has_exact():
+                un = self.exact(xn, yn)
+                mlab.surf(xn, yn, un, representation='wireframe')
             self.plt1 = mlab.surf(xn, yn, pn, opacity=0.8)
-            #self.plt1.actor.property.edge_visibility = True
             mlab.colorbar(self.plt1)
         else:
             self.plt1.mlab_source.scalars = pn

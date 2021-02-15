@@ -1,5 +1,4 @@
 import numpy as np
-from mayavi import mlab
 from twod import Problem2D, RegularDomain, App2D, tensor
 from spinn2d import SPINN2D
 
@@ -53,7 +52,7 @@ class SlitDomain(RegularDomain):
 
     def plot_points(self):
         n = self.ns*2
-        x, y = (tensor(t.ravel()) for t in np.mgrid[-1:1:n*1j, -1:1:n*1j])
+        x, y = np.mgrid[-1:1:n*1j, -1:1:n*1j]
         return x, y
 
     def eval_bc(self, problem):
@@ -79,6 +78,9 @@ class SlitProblem(Problem2D):
         r = np.sqrt(x*x + y*y)
         theta = np.arctan2(y, x)
         return 0.15*np.sqrt(r)*np.sin(0.5*theta)
+
+    def has_exact(self):
+        return False
 
 
 if __name__ == '__main__':
