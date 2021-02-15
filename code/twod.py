@@ -313,7 +313,7 @@ class SoftPlus:
         sp = self._sp
         return sp(
             self.k - sp(x) - sp(-x) - sp(y) - sp(-y)
-        )*self.fac
+        )/self.fac
 
 
 class Kernel(nn.Module):
