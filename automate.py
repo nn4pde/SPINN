@@ -50,6 +50,25 @@ class ODE1(Problem):
             plt.close()
 
 
+class ODE2(ODE1):
+    def get_name(self):
+        return 'ode2'
+
+    def setup(self):
+        base_cmd = (
+            'python code/neumann1d.py -d $output_dir '
+            '-a gaussian'
+        )
+        self.cases = [
+            Simulation(
+                root=self.input_path('n_%d' % i),
+                base_command=base_cmd,
+                nodes=i, samples=i*8
+            )
+            for i in (6, 10, 15)
+        ]
+
+
 class ODE3(ODE1):
     def get_name(self):
         return 'ode3'
@@ -70,7 +89,7 @@ class ODE3(ODE1):
 
 
 if __name__ == '__main__':
-    PROBLEMS = [ODE1, ODE3]
+    PROBLEMS = [ODE1, ODE2, ODE3]
     automator = Automator(
         simulation_dir='outputs',
         output_dir=os.path.join('manuscript', 'figures'),
