@@ -50,8 +50,27 @@ class ODE1(Problem):
             plt.close()
 
 
+class ODE3(ODE1):
+    def get_name(self):
+        return 'ode3'
+
+    def setup(self):
+        base_cmd = (
+            'python code/spinn1d.py -d $output_dir '
+            '--de pulse -a softplus'
+        )
+        self.cases = [
+            Simulation(
+                root=self.input_path('n_%d' % i),
+                base_command=base_cmd,
+                nodes=i, samples=100
+            )
+            for i in (5, 9, 12)
+        ]
+
+
 if __name__ == '__main__':
-    PROBLEMS = [ODE1]
+    PROBLEMS = [ODE1, ODE3]
     automator = Automator(
         simulation_dir='outputs',
         output_dir=os.path.join('manuscript', 'figures'),
