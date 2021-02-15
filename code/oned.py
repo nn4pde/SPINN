@@ -317,4 +317,4 @@ class App1D:
         solver.solve()
 
         if args.directory is not None:
-            solver.save(args.directory)
+            solver.save()

@@ -1,16 +1,57 @@
 #!/usr/bin/env python
 import os
 
-from automan.api import PySPHProblem as Problem
+from automan.api import Problem
 from automan.api import Automator, Simulation, filter_cases
 import numpy as np
+import torch
 import matplotlib
 matplotlib.use('pdf')
+import matplotlib.pyplot as plt
 
-# XXX
+
+class ODE1(Problem):
+    def get_name(self):
+        return 'ode1'
+
+    def setup(self):
+        base_cmd = (
+            'python code/spinn1d.py -d $output_dir '
+            '--de simple -a softplus'
+        )
+        self.cases = [
+            Simulation(
+                root=self.input_path('n_%d' % i),
+                base_command=base_cmd,
+                nodes=i, samples=30
+            )
+            for i in (1, 3, 7)
+        ]
+
+    def run(self):
+        self.make_output_dir()
+        for case in self.cases:
+            plt.figure()
+            res = np.load(case.input_path('results.npz'))
+            nn_state = torch.load(case.input_path('model.pt'))
+            plt.plot(
+                res['x'], res['y_exact'], label='Exact'
+            )
+            plt.plot(
+                res['x'], res['y'], '--', label='SPINN'
+            )
+            plt.xlabel(r'$x$')
+            plt.ylabel(r'$u(x)$')
+            plt.legend()
+            plt.grid()
+            cen = [0.0] + nn_state['layer1.center'].tolist() + [1.0]
+            plt.plot(cen, np.zeros_like(cen), 'o')
+            plt.savefig(self.output_path('n_%d.pdf' % case.params['nodes']))
+            plt.close()
+
 
 if __name__ == '__main__':
-    PROBLEMS = []
+    PROBLEMS = [ODE1]
     automator = Automator(
         simulation_dir='outputs',
         output_dir=os.path.join('manuscript', 'figures'),
