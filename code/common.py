@@ -26,7 +26,7 @@ def tensor(x, **kw):
     return torch.tensor(x, dtype=torch.float32, device=device(), **kw)
 
 
-class Domain:
+class PDE:
     @classmethod
     def from_args(cls, args):
         pass
@@ -202,7 +202,7 @@ class Optimizer:
                 else:
                     err = problem.get_error()
                 self.errors.append(err)
-                if problem.domain.has_exact():
+                if problem.pde.has_exact():
                     e_str = f", error={err:.3e}"
                 else:
                     e_str = ''

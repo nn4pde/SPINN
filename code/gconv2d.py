@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch_geometric.nn import MessagePassing
 from torch_geometric.nn import knn
 
-from spinn2d import App2D, Problem2D, ToyDomain, tensor
+from spinn2d import App2D, Problem2D, ToyPDE, tensor
 
 
 class SPHConv(MessagePassing):
@@ -28,8 +28,8 @@ class SPHConv(MessagePassing):
 
 class GConvNet(nn.Module):
     @classmethod
-    def from_args(cls, domain, activation, args):
-        return cls(domain, activation, fixed_h=args.fixed_h,
+    def from_args(cls, pde, activation, args):
+        return cls(pde, activation, fixed_h=args.fixed_h,
                    use_pu=not args.no_pu, max_nbrs=args.max_nbrs)
 
     @classmethod
@@ -49,14 +49,14 @@ class GConvNet(nn.Module):
             help='Maximum number of neighbors to use.'
         )
 
-    def __init__(self, domain, activation,
+    def __init__(self, pde, activation,
                  fixed_h=False, use_pu=True, max_nbrs=25):
         super().__init__()
         self.activation = activation
         self.use_pu = use_pu
         self.max_nbrs = max_nbrs
-        points = domain.nodes()
-        fixed_points = domain.fixed_nodes()
+        points = pde.nodes()
+        fixed_points = pde.fixed_nodes()
         n_free = len(points[0])
         n_fixed = len(fixed_points[0])
         self.n = n = n_free + n_fixed
@@ -115,6 +115,6 @@ class GConvNet(nn.Module):
 if __name__ == '__main__':
     app = App2D(
         problem_cls=Problem2D, nn_cls=GConvNet,
-        domain_cls=ToyDomain
+        pde_cls=ToyPDE
     )
     app.run(nodes=40, samples=120, lr=1e-2)

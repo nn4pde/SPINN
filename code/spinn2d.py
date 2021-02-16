@@ -6,14 +6,14 @@ import torch
 import torch.autograd as ag
 import torch.nn as nn
 
-from common import Domain, tensor
+from common import PDE, tensor
 from spinn1d import Problem1D, App1D
 
 
 PI = np.pi
 
 
-class RegularDomain(Domain):
+class RegularPDE(PDE):
     @classmethod
     def from_args(cls, args):
         return cls(args.nodes, args.samples,
@@ -114,7 +114,7 @@ class RegularDomain(Domain):
         pass
 
 
-class ToyDomain(RegularDomain):
+class ToyPDE(RegularPDE):
     @classmethod
     def from_args(cls, args):
         return cls(args.nodes, args.samples,
@@ -176,24 +176,24 @@ class Problem2D(Problem1D):
         return u, du[0], du[1], d2ux[0],  d2uy[1]
 
     def loss(self):
-        domain = self.domain
+        pde = self.pde
         nn = self.nn
-        xs, ys = domain.interior()
+        xs, ys = pde.interior()
         u = nn(xs, ys)
         u, ux, uy, uxx, uyy = self._compute_derivatives(u, xs, ys)
-        res = domain.pde(xs, ys, u, ux, uy, uxx, uyy)
+        res = pde.pde(xs, ys, u, ux, uy, uxx, uyy)
         l1 = (res**2).mean()
-        bc = domain.eval_bc(self)
+        bc = pde.eval_bc(self)
         bc_loss = (bc**2).sum()
         loss = l1 + bc_loss
         return loss
 
     def get_error(self, xn=None, yn=None, pn=None):
-        if not self.domain.has_exact():
+        if not self.pde.has_exact():
             return 0.0
         if xn is None and pn is None:
             xn, yn, pn = self.get_plot_data()
-        un = self.domain.exact(xn, yn)
+        un = self.pde.exact(xn, yn)
         umax = np.max(np.abs(un))
         diff = np.abs(un - pn)
         return diff.mean()/umax
@@ -211,7 +211,7 @@ class Problem2D(Problem1D):
 
     # Plotting methods
     def get_plot_data(self):
-        x, y = self.domain.plot_points()
+        x, y = self.pde.plot_points()
         xt, yt = tensor(x.ravel()), tensor(y.ravel())
         pn = self.nn(xt, yt).detach().cpu().numpy()
         pn.shape = x.shape
@@ -237,11 +237,11 @@ class Problem2D(Problem1D):
 
     def plot_solution(self):
         xn, yn, pn = self.get_plot_data()
-        domain = self.domain
+        pde = self.pde
         if self.plt1 is None:
             mlab.figure(size=(700, 700))
-            if self.show_exact and domain.has_exact():
-                un = domain.exact(xn, yn)
+            if self.show_exact and pde.has_exact():
+                un = pde.exact(xn, yn)
                 mlab.surf(xn, yn, un, representation='wireframe')
             self.plt1 = mlab.surf(xn, yn, pn, opacity=0.8)
             mlab.colorbar(self.plt1)
@@ -304,8 +304,8 @@ class Shift2D(nn.Module):
 
 class SPINN2D(nn.Module):
     @classmethod
-    def from_args(cls, domain, activation, args):
-        return cls(domain, activation,
+    def from_args(cls, pde, activation, args):
+        return cls(pde, activation,
                    fixed_h=args.fixed_h, use_pu=not args.no_pu)
 
     @classmethod
@@ -320,13 +320,13 @@ class SPINN2D(nn.Module):
             help='Do not use a partition of unity.'
         )
 
-    def __init__(self, domain, activation, n_outputs=1,
+    def __init__(self, pde, activation, n_outputs=1,
                  fixed_h=False, use_pu=True):
         super().__init__()
 
         self.activation = activation
         self.use_pu = use_pu
-        self.layer1 = Shift2D(domain.nodes(), domain.fixed_nodes(),
+        self.layer1 = Shift2D(pde.nodes(), pde.fixed_nodes(),
                               fixed_h=fixed_h)
         n = self.layer1.n
         self.layer2 = nn.Linear(n, n_outputs, bias=not use_pu)
@@ -425,6 +425,6 @@ class App2D(App1D):
 if __name__ == '__main__':
     app = App2D(
         problem_cls=Problem2D, nn_cls=SPINN2D,
-        domain_cls=ToyDomain
+        pde_cls=ToyPDE
     )
     app.run(nodes=40, samples=120, lr=1e-2)

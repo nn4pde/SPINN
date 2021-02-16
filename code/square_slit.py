@@ -1,8 +1,8 @@
 import numpy as np
-from spinn2d import Problem2D, RegularDomain, App2D, SPINN2D, tensor
+from spinn2d import Problem2D, RegularPDE, App2D, SPINN2D, tensor
 
 
-class SlitDomain(RegularDomain):
+class SlitPDE(RegularPDE):
     def __init__(self, n_nodes, ns, nb=None, nbs=None):
         # Interior nodes
         n = round(np.sqrt(n_nodes) + 0.49)
@@ -70,6 +70,6 @@ class SlitDomain(RegularDomain):
 if __name__ == '__main__':
     app = App2D(
         problem_cls=Problem2D, nn_cls=SPINN2D,
-        domain_cls=SlitDomain
+        pde_cls=SlitPDE
     )
     app.run(nodes=50, samples=200, lr=1e-2)

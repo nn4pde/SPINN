@@ -7,10 +7,10 @@ import torch
 import torch.autograd as ag
 import torch.nn as nn
 
-from common import Problem, Optimizer, Domain, device, tensor
+from common import Problem, Optimizer, PDE, device, tensor
 
 
-class RegularDomain(Domain):
+class RegularPDE(PDE):
     @classmethod
     def from_args(cls, args):
         return cls(args.nodes, args.samples)
@@ -69,7 +69,7 @@ class RegularDomain(Domain):
         pass
 
 
-class ToyDomain(RegularDomain):
+class ToyPDE(RegularPDE):
     @classmethod
     def from_args(cls, args):
         return cls(args.nodes, args.samples, args.de)
@@ -113,8 +113,8 @@ class ToyDomain(RegularDomain):
 class Problem1D(Problem):
 
     @classmethod
-    def from_args(cls, domain, nn, args):
-        return cls(domain, nn, args.no_show_exact)
+    def from_args(cls, pde, nn, args):
+        return cls(pde, nn, args.no_show_exact)
 
     @classmethod
     def setup_argparse(cls, parser, **kw):
@@ -125,18 +125,18 @@ class Problem1D(Problem):
             help='Do not show exact solution even if available.'
         )
 
-    def __init__(self, domain, nn, no_show_exact=False):
+    def __init__(self, pde, nn, no_show_exact=False):
         '''Initializer
 
         Parameters
         -----------
 
-        domain: Domain: object managing the domain.
+        pde: PDE: object managing the pde.
         nn: Neural network for the solution
         eq: DiffEq: Differential equation to evaluate.
         no_show_exact: bool: Show exact solution or not.
         '''
-        self.domain = domain
+        self.pde = pde
         self.nn = nn
         self.plt1 = None
         self.plt2 = None  # For weights
@@ -155,13 +155,13 @@ class Problem1D(Problem):
         return u, du[0], d2u[0]
 
     def loss(self):
-        domain = self.domain
+        pde = self.pde
         nn = self.nn
-        xs = domain.interior()
+        xs = pde.interior()
         u = nn(xs)
         u, ux, uxx = self._compute_derivatives(u, xs)
-        res = domain.pde(xs, u, ux, uxx)
-        bc = domain.eval_bc(self)
+        res = pde.pde(xs, u, ux, uxx)
+        bc = pde.eval_bc(self)
         bc_loss = (bc**2).sum()
         ns = len(xs)
         loss = (
@@ -171,12 +171,12 @@ class Problem1D(Problem):
         return loss
 
     def get_error(self, xn=None, pn=None):
-        if not self.domain.has_exact():
+        if not self.pde.has_exact():
             return 0.0
 
         if xn is None and pn is None:
             xn, pn = self.get_plot_data()
-        yn = self.domain.exact(xn)
+        yn = self.pde.exact(xn)
         umax = max(np.abs(yn))
         diff = np.abs(yn - pn)
         return diff.mean()/umax
@@ -189,24 +189,24 @@ class Problem1D(Problem):
         torch.save(self.nn.state_dict(), modelfname)
         rfile = os.path.join(dirname, 'results.npz')
         x, y = self.get_plot_data()
-        y_exact = self.domain.exact(x)
+        y_exact = self.pde.exact(x)
         np.savez(rfile, x=x, y=y, y_exact=y_exact)
 
     # Plotting methods
     def get_plot_data(self):
-        x = self.domain.plot_points()
+        x = self.pde.plot_points()
         xt = tensor(x)
         pn = self.nn(xt).detach().cpu().numpy()
         return x, pn
 
     def plot_solution(self):
         xn, pn = self.get_plot_data()
-        domain = self.domain
+        pde = self.pde
         if self.plt1 is None:
             lines, = plt.plot(xn, pn, '-', label='computed')
             self.plt1 = lines
-            if self.show_exact and domain.has_exact():
-                yn = self.domain.exact(xn)
+            if self.show_exact and pde.has_exact():
+                yn = self.pde.exact(xn)
                 plt.plot(xn, yn, label='exact')
             else:
                 yn = pn
@@ -269,8 +269,8 @@ class Shift(nn.Module):
 
 class SPINN1D(nn.Module):
     @classmethod
-    def from_args(cls, domain, activation, args):
-        return cls(domain, activation,
+    def from_args(cls, pde, activation, args):
+        return cls(pde, activation,
                    fixed_h=args.fixed_h, use_pu=not args.no_pu)
 
     @classmethod
@@ -285,12 +285,12 @@ class SPINN1D(nn.Module):
             help='Do not use a partition of unity.'
         )
 
-    def __init__(self, domain, activation, fixed_h=False, use_pu=True):
+    def __init__(self, pde, activation, fixed_h=False, use_pu=True):
         super().__init__()
 
         self.fixed_h = fixed_h
         self.use_pu = use_pu
-        self.layer1 = Shift(domain.nodes(), domain.fixed_nodes(),
+        self.layer1 = Shift(pde.nodes(), pde.fixed_nodes(),
                             fixed_h=fixed_h)
         n = self.layer1.n
         self.activation = activation
@@ -366,11 +366,11 @@ class Kernel(nn.Module):
 
 
 class App1D:
-    def __init__(self, problem_cls, nn_cls, domain_cls,
+    def __init__(self, problem_cls, nn_cls, pde_cls,
                  optimizer=Optimizer):
         self.problem_cls = problem_cls
         self.nn_cls = nn_cls
-        self.domain_cls = domain_cls
+        self.pde_cls = pde_cls
         self.optimizer = optimizer
 
     def setup_argparse(self, **kw):
@@ -389,7 +389,7 @@ class App1D:
             help='Run code on the GPU.'
         )
         classes = (
-            self.domain_cls, self.problem_cls, self.nn_cls, self.optimizer
+            self.pde_cls, self.problem_cls, self.nn_cls, self.optimizer
         )
         for c in classes:
             c.setup_argparse(p, **kw)
@@ -432,11 +432,11 @@ class App1D:
         activation = self._get_activation(args)
 
         dev = device()
-        dom = self.domain_cls.from_args(args)
-        self.domain = dom
-        nn = self.nn_cls.from_args(dom, activation, args).to(dev)
+        pde = self.pde_cls.from_args(args)
+        self.pde = pde
+        nn = self.nn_cls.from_args(pde, activation, args).to(dev)
         self.nn = nn
-        p = self.problem_cls.from_args(dom, nn, args)
+        p = self.problem_cls.from_args(pde, nn, args)
         self.problem = p
         solver = self.optimizer.from_args(p, args)
         self.solver = solver
@@ -449,6 +449,6 @@ class App1D:
 if __name__ == '__main__':
     app = App1D(
         problem_cls=Problem1D, nn_cls=SPINN1D,
-        domain_cls=ToyDomain
+        pde_cls=ToyPDE
     )
     app.run(nodes=20, samples=80, lr=1e-2)

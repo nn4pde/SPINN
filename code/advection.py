@@ -1,8 +1,8 @@
 import numpy as np
-from spinn2d import Problem2D, RegularDomain, App2D, SPINN2D, tensor
+from spinn2d import Problem2D, RegularPDE, App2D, SPINN2D, tensor
 
 
-class IVDomain(RegularDomain):
+class IVPDE(RegularPDE):
     @classmethod
     def from_args(cls, args):
         return cls(args.nodes, args.samples, args.b_nodes,
@@ -110,6 +110,6 @@ class IVDomain(RegularDomain):
 if __name__ == '__main__':
     app = App2D(
         problem_cls=Problem2D, nn_cls=SPINN2D,
-        domain_cls=IVDomain
+        pde_cls=IVPDE
     )
     app.run(nodes=100, samples=200, lr=1e-2)

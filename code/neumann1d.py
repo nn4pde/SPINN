@@ -1,10 +1,10 @@
 import numpy as np
 import torch
-from spinn1d import RegularDomain, App1D, SPINN1D, Problem1D, tensor
+from spinn1d import RegularPDE, App1D, SPINN1D, Problem1D, tensor
 import torch.autograd as ag
 
 
-class MyDomain(RegularDomain):
+class MyPDE(RegularPDE):
     def __init__(self, n, ns):
         super().__init__(n, ns)
         self.xb.requires_grad = True
@@ -29,5 +29,5 @@ class MyDomain(RegularDomain):
 
 
 if __name__ == '__main__':
-    app = App1D(Problem1D, SPINN1D, MyDomain)
+    app = App1D(Problem1D, SPINN1D, MyPDE)
     app.run(nodes=20, samples=80, lr=1e-2)
