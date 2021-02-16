@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch_geometric.nn import MessagePassing
 from torch_geometric.nn import knn
 
-from twod import App2D, Problem2D, RegularDomain, tensor
+from spinn2d import App2D, Problem2D, RegularDomain, tensor
 
 
 class SPHConv(MessagePassing):

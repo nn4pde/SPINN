@@ -1,7 +1,6 @@
 import numpy as np
 import torch
-from oned import RegularDomain, App1D, tensor
-from spinn1d import SPINN1D, SPINNProblem1D
+from spinn1d import RegularDomain, App1D, SPINN1D, Problem1D, tensor
 import torch.autograd as ag
 
 
@@ -23,7 +22,7 @@ class MyDomain(RegularDomain):
         return torch.cat((dbc, nbc))
 
 
-class MyProblem(SPINNProblem1D):
+class MyProblem(Problem1D):
     @classmethod
     def from_args(cls, domain, nn, args):
         return cls(domain, nn, None)

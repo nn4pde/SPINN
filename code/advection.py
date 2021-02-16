@@ -1,6 +1,5 @@
 import numpy as np
-from twod import Problem2D, RegularDomain, App2D, tensor
-from spinn2d import SPINN2D
+from spinn2d import Problem2D, RegularDomain, App2D, SPINN2D, tensor
 
 
 class IVDomain(RegularDomain):
