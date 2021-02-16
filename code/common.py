@@ -98,12 +98,17 @@ class Problem:
     def pde(self, *args):
         pass
 
-    def exact(self, *args):
+    def bc(self, *args):
         pass
 
     def has_exact(self):
-        return True
+        return False
 
+    def exact(self, *args):
+        pass
+
+    def show_exact(self):
+        return True
 
 class Optimizer:
     @classmethod

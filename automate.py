@@ -9,6 +9,7 @@ import matplotlib
 matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 
+python_bin = 'python3'
 
 class ODE1(Problem):
     def get_name(self):
@@ -16,7 +17,8 @@ class ODE1(Problem):
 
     def setup(self):
         base_cmd = (
-            'python code/spinn1d.py -d $output_dir '
+            python_bin +
+            ' code/spinn1d.py -d $output_dir '
             '--de simple -a softplus'
         )
         self.cases = [
@@ -56,7 +58,8 @@ class ODE2(ODE1):
 
     def setup(self):
         base_cmd = (
-            'python code/neumann1d.py -d $output_dir '
+            python_bin + 
+            ' code/neumann1d.py -d $output_dir '
             '-a gaussian'
         )
         self.cases = [
@@ -75,7 +78,8 @@ class ODE3(ODE1):
 
     def setup(self):
         base_cmd = (
-            'python code/spinn1d.py -d $output_dir '
+            python_bin +
+            ' code/spinn1d.py -d $output_dir '
             '--de pulse -a softplus'
         )
         self.cases = [

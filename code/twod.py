@@ -215,7 +215,7 @@ class Problem2D(Problem1D):
         xn, yn, pn = self.get_plot_data()
         if self.plt1 is None:
             mlab.figure(size=(700, 700))
-            if self.has_exact():
+            if self.show_exact():
                 un = self.exact(xn, yn)
                 mlab.surf(xn, yn, un, representation='wireframe')
             self.plt1 = mlab.surf(xn, yn, pn, opacity=0.8)

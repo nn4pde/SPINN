@@ -13,13 +13,13 @@ class MyDomain(RegularDomain):
     def eval_bc(self, problem):
         x = self.boundary()
         u = problem.nn(x)
-        ub = tensor(problem.exact(self.xbn))
         du = ag.grad(
             outputs=u, inputs=x, grad_outputs=torch.ones_like(u),
             retain_graph=True
         )
+        ub = tensor(list(map(problem.bc, x)))
         dbc = (u - ub)[:1]
-        nbc = (du[0][1:] - 0.5)
+        nbc = (du[0] - ub)[1:]
         return torch.cat((dbc, nbc))
 
 
@@ -35,8 +35,22 @@ class MyProblem(SPINNProblem1D):
     def pde(self, x, u, ux, uxx):
         return uxx + np.pi*(np.pi*u - torch.sin(np.pi*x))
 
+    def bc(self, x):
+        tol = 1e-4
+
+        if abs(x) < tol:
+            return 0.0
+        elif abs(x - 1.0) < tol:
+            return 0.5
+
+    def has_exact(self):
+        return True
+
     def exact(self, x):
         return -0.5*x*np.cos(np.pi*x)
+
+    def show_exact(self):
+        return True
 
 
 if __name__ == '__main__':

@@ -156,7 +156,7 @@ class Problem1D(Problem):
             yn = self.exact(xn)
             lines, = plt.plot(xn, pn, '-', label='computed')
             self.plt1 = lines
-            if self.has_exact():
+            if self.show_exact():
                 plt.plot(xn, yn, label='exact')
             plt.grid()
             plt.xlim(-0.1, 1.1)
