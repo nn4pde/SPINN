@@ -104,13 +104,25 @@ class RegularDomain(Domain):
         xbn, ybn = (t.detach().cpu().numpy() for t in (xb, yb))
 
         u = problem.nn(xb, yb)
-        ub = tensor(problem.exact(xbn, ybn))
+        ub = tensor(self.exact(xbn, ybn))
         return u - ub
 
+    def pde(self, x, y, u, ux, uy, uxx, uyy):
+        raise NotImplementedError()
 
-class Problem2D(Problem1D):
+    def exact(self, x, y):
+        pass
+
+
+class ToyDomain(RegularDomain):
+    @classmethod
+    def from_args(cls, args):
+        return cls(args.nodes, args.samples,
+                   args.b_nodes, args.b_samples, args.de)
+
     @classmethod
     def setup_argparse(cls, parser, **kw):
+        super().setup_argparse(parser, **kw)
         p = parser
         p.add_argument(
             '--de', dest='de', default=kw.get('de', 'sin2'),
@@ -118,21 +130,33 @@ class Problem2D(Problem1D):
             help='Differential equation to solve.'
         )
 
-    def __init__(self, domain, nn, deq):
-        '''Initializer
+    def __init__(self, n_nodes, ns, nb=None, nbs=None, de='bump'):
+        super().__init__(n_nodes, ns, nb=nb, nbs=nbs)
+        self.deq = de
 
-        Parameters
-        -----------
+    def pde(self, x, y, u, ux, uy, uxx, uyy):
+        if self.deq == 'sin2':
+            f = 20*PI**2*torch.sin(2*PI*x)*torch.sin(4*PI*y)
+            return uxx + uyy + f
+        elif self.deq == 'bump':
+            K = 0.05
+            ex = torch.exp(-(x - 0.25)*(x - 0.25)/K)
+            fxx = (
+                (1.0 + ((1.0 - 2.0*x)*(x - 0.25) + x*(1.0 - x))/K)
+                + ((1.0 - 2.0*x - 2.0*x*(1 - x)*(x - 0.25)/K)*(x - 0.25)/K)
+            )*2.0*ex*y*(1 - y)
+            fyy = 2.0*x*(1.0 - x)*ex
+            return uxx + uyy + fxx + fyy
 
-        Parameters
-        -----------
+    def exact(self, x, y):
+        if self.deq == 'sin2':
+            return np.sin(2*PI*x)*np.sin(4*PI*y)
+        elif self.deq == 'bump':
+            K = 0.05
+            return x*(1.0 - x)*y*(1.0 - y)*np.exp(-(x - 0.25)*(x - 0.25)/K)
 
-        domain: Domain: object managing the domain.
-        nn: Neural network for the solution
-        deq: str: Differential equation to evaluate.
-        '''
-        super().__init__(domain, nn, deq)
 
+class Problem2D(Problem1D):
     def _compute_derivatives(self, u, xs, ys):
         du = ag.grad(
             outputs=u, inputs=(xs, ys), grad_outputs=torch.ones_like(u),
@@ -157,7 +181,7 @@ class Problem2D(Problem1D):
         xs, ys = domain.interior()
         u = nn(xs, ys)
         u, ux, uy, uxx, uyy = self._compute_derivatives(u, xs, ys)
-        res = self.pde(xs, ys, u, ux, uy, uxx, uyy)
+        res = domain.pde(xs, ys, u, ux, uy, uxx, uyy)
         l1 = (res**2).mean()
         bc = domain.eval_bc(self)
         bc_loss = (bc**2).sum()
@@ -165,11 +189,11 @@ class Problem2D(Problem1D):
         return loss
 
     def get_error(self, xn=None, yn=None, pn=None):
-        if not self.has_exact():
+        if not self.domain.has_exact():
             return 0.0
         if xn is None and pn is None:
             xn, yn, pn = self.get_plot_data()
-        un = self.exact(xn, yn)
+        un = self.domain.exact(xn, yn)
         umax = np.max(np.abs(un))
         diff = np.abs(un - pn)
         return diff.mean()/umax
@@ -213,10 +237,11 @@ class Problem2D(Problem1D):
 
     def plot_solution(self):
         xn, yn, pn = self.get_plot_data()
+        domain = self.domain
         if self.plt1 is None:
             mlab.figure(size=(700, 700))
-            if self.show_exact():
-                un = self.exact(xn, yn)
+            if self.show_exact and domain.has_exact():
+                un = domain.exact(xn, yn)
                 mlab.surf(xn, yn, un, representation='wireframe')
             self.plt1 = mlab.surf(xn, yn, pn, opacity=0.8)
             mlab.colorbar(self.plt1)
@@ -234,28 +259,6 @@ class Problem2D(Problem1D):
 
     def show(self):
         mlab.show()
-
-    # ####### Override these for different differential equations
-    def pde(self, x, y, u, ux, uy, uxx, uyy):
-        if self.deq == 'sin2':
-            f = 20*PI**2*torch.sin(2*PI*x)*torch.sin(4*PI*y)
-            return uxx + uyy + f
-        elif self.deq == 'bump':
-            K = 0.05
-            ex = torch.exp(-(x - 0.25)*(x - 0.25)/K)
-            fxx = (
-                (1.0 + ((1.0 - 2.0*x)*(x - 0.25) + x*(1.0 - x))/K)
-                + ((1.0 - 2.0*x - 2.0*x*(1 - x)*(x - 0.25)/K)*(x - 0.25)/K)
-            )*2.0*ex*y*(1 - y)
-            fyy = 2.0*x*(1.0 - x)*ex
-            return uxx + uyy + fxx + fyy
-
-    def exact(self, x, y):
-        if self.deq == 'sin2':
-            return np.sin(2*PI*x)*np.sin(4*PI*y)
-        elif self.deq == 'bump':
-            K = 0.05
-            return x*(1.0 - x)*y*(1.0 - y)*np.exp(-(x - 0.25)*(x - 0.25)/K)
 
 
 class Shift2D(nn.Module):
@@ -422,6 +425,6 @@ class App2D(App1D):
 if __name__ == '__main__':
     app = App2D(
         problem_cls=Problem2D, nn_cls=SPINN2D,
-        domain_cls=RegularDomain
+        domain_cls=ToyDomain
     )
     app.run(nodes=40, samples=120, lr=1e-2)

@@ -58,18 +58,25 @@ class RegularDomain(Domain):
 
     def eval_bc(self, problem):
         u = problem.nn(self.boundary())
-        ub = tensor(problem.exact(self.xbn))
+        ub = tensor(self.exact(self.xbn))
         return u - ub
 
+    # ####### Override these for different differential equations
+    def pde(self, x, u, ux, uxx):
+        raise NotImplementedError()
 
-class Problem1D(Problem):
+    def exact(self, x, y):
+        pass
 
+
+class ToyDomain(RegularDomain):
     @classmethod
-    def from_args(cls, domain, nn, args):
-        return cls(domain, nn, args.de)
+    def from_args(cls, args):
+        return cls(args.nodes, args.samples, args.de)
 
     @classmethod
     def setup_argparse(cls, parser, **kw):
+        super().setup_argparse(parser, **kw)
         p = parser
         p.add_argument(
             '--de', dest='de', default=kw.get('de', 'sin8'),
@@ -77,7 +84,48 @@ class Problem1D(Problem):
             help='Differential equation to solve.'
         )
 
-    def __init__(self, domain, nn, deq):
+    def __init__(self, n, ns, deq):
+        super().__init__(n, ns)
+        self.deq = deq
+
+    def pde(self, x, u, ux, uxx):
+        if self.deq == 'pulse':
+            K = 0.01
+            f = -(K*(-6*x + 4/3.) +
+                  x*(2*x - 2./3)**2)*torch.exp(-(x - 1/3.)**2/K)/K**2
+            return uxx + f
+        elif self.deq == 'sin8':
+            return uxx + torch.sin(8.0*np.pi*x)
+        elif self.deq == 'simple':
+            return uxx + 1.0
+
+    def exact(self, x):
+        if self.deq == 'pulse':
+            K = 0.01
+            return x*(np.exp(-((x - (1.0/3.0))**2)/K) -
+                      np.exp(-4.0/(9.0*K)))
+        elif self.deq == 'sin8':
+            return np.sin(8.0*np.pi*x)/(64.0*np.pi**2)
+        elif self.deq == 'simple':
+            return 0.5*x*(1.0 - x)
+
+
+class Problem1D(Problem):
+
+    @classmethod
+    def from_args(cls, domain, nn, args):
+        return cls(domain, nn, args.no_show_exact)
+
+    @classmethod
+    def setup_argparse(cls, parser, **kw):
+        p = parser
+        p.add_argument(
+            '--no-show-exact', dest='no_show_exact',
+            action='store_true', default=False,
+            help='Do not show exact solution even if available.'
+        )
+
+    def __init__(self, domain, nn, no_show_exact=False):
         '''Initializer
 
         Parameters
@@ -86,12 +134,13 @@ class Problem1D(Problem):
         domain: Domain: object managing the domain.
         nn: Neural network for the solution
         eq: DiffEq: Differential equation to evaluate.
+        no_show_exact: bool: Show exact solution or not.
         '''
         self.domain = domain
         self.nn = nn
-        self.deq = deq
         self.plt1 = None
         self.plt2 = None  # For weights
+        self.show_exact = not no_show_exact
 
     def _compute_derivatives(self, u, x):
         du = ag.grad(
@@ -111,7 +160,7 @@ class Problem1D(Problem):
         xs = domain.interior()
         u = nn(xs)
         u, ux, uxx = self._compute_derivatives(u, xs)
-        res = self.pde(xs, u, ux, uxx)
+        res = domain.pde(xs, u, ux, uxx)
         bc = domain.eval_bc(self)
         bc_loss = (bc**2).sum()
         ns = len(xs)
@@ -122,12 +171,12 @@ class Problem1D(Problem):
         return loss
 
     def get_error(self, xn=None, pn=None):
-        if not self.has_exact():
+        if not self.domain.has_exact():
             return 0.0
 
         if xn is None and pn is None:
             xn, pn = self.get_plot_data()
-        yn = self.exact(xn)
+        yn = self.domain.exact(xn)
         umax = max(np.abs(yn))
         diff = np.abs(yn - pn)
         return diff.mean()/umax
@@ -140,7 +189,7 @@ class Problem1D(Problem):
         torch.save(self.nn.state_dict(), modelfname)
         rfile = os.path.join(dirname, 'results.npz')
         x, y = self.get_plot_data()
-        y_exact = self.exact(x)
+        y_exact = self.domain.exact(x)
         np.savez(rfile, x=x, y=y, y_exact=y_exact)
 
     # Plotting methods
@@ -152,12 +201,15 @@ class Problem1D(Problem):
 
     def plot_solution(self):
         xn, pn = self.get_plot_data()
+        domain = self.domain
         if self.plt1 is None:
-            yn = self.exact(xn)
             lines, = plt.plot(xn, pn, '-', label='computed')
             self.plt1 = lines
-            if self.show_exact():
+            if self.show_exact and domain.has_exact():
+                yn = self.domain.exact(xn)
                 plt.plot(xn, yn, label='exact')
+            else:
+                yn = pn
             plt.grid()
             plt.xlim(-0.1, 1.1)
             ymax, ymin = np.max(yn), np.min(yn)
@@ -186,28 +238,6 @@ class Problem1D(Problem):
 
     def show(self):
         plt.show()
-
-    # ####### Override these for different differential equations
-    def pde(self, x, u, ux, uxx):
-        if self.deq == 'pulse':
-            K = 0.01
-            f = -(K*(-6*x + 4/3.) +
-                  x*(2*x - 2./3)**2)*torch.exp(-(x - 1/3.)**2/K)/K**2
-            return uxx + f
-        elif self.deq == 'sin8':
-            return uxx + torch.sin(8.0*np.pi*x)
-        elif self.deq == 'simple':
-            return uxx + 1.0
-
-    def exact(self, x):
-        if self.deq == 'pulse':
-            K = 0.01
-            return x*(np.exp(-((x - (1.0/3.0))**2)/K) -
-                      np.exp(-4.0/(9.0*K)))
-        elif self.deq == 'sin8':
-            return np.sin(8.0*np.pi*x)/(64.0*np.pi**2)
-        elif self.deq == 'simple':
-            return 0.5*x*(1.0 - x)
 
 
 class Shift(nn.Module):
@@ -291,8 +321,8 @@ class SPINN1D(nn.Module):
 
     def show(self):
         print("Basis centers: ", self.centers())
-        print("Mesh widths: ", self.layer1.h)
-        print("Nodal weights: ", self.layer2.weight)
+        print("Mesh widths: ", self.widths())
+        print("Nodal weights: ", self.weights())
         print("Output bias: ", self.layer2.bias)
 
 
@@ -419,6 +449,6 @@ class App1D:
 if __name__ == '__main__':
     app = App1D(
         problem_cls=Problem1D, nn_cls=SPINN1D,
-        domain_cls=RegularDomain
+        domain_cls=ToyDomain
     )
     app.run(nodes=20, samples=80, lr=1e-2)

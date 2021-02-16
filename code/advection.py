@@ -3,7 +3,36 @@ from spinn2d import Problem2D, RegularDomain, App2D, SPINN2D, tensor
 
 
 class IVDomain(RegularDomain):
-    def __init__(self, n_nodes, ns, nb=None, nbs=None):
+    @classmethod
+    def from_args(cls, args):
+        return cls(args.nodes, args.samples, args.b_nodes,
+                   args.b_samples, args.de, args.ic, args.viscosity)
+
+    @classmethod
+    def setup_argparse(cls, parser, **kw):
+        super().setup_argparse(parser, **kw)
+        p = parser
+        p.add_argument(
+            '--de', dest='de', default=kw.get('de', 'linear'),
+            choices=['linear', 'burgers'],
+            help='Differential equation to solve.'
+        )
+        p.add_argument(
+            '--viscosity', dest='viscosity',
+            default=kw.get('viscosity', 0.0), type=float,
+            help='Differential equation to solve.'
+        )
+        p.add_argument(
+            '--ic', dest='ic', default=kw.get('ic', 'gaussian'),
+            choices=['gaussian', 'hat', 'sin', 'sin2'],
+            help='Initial condition.'
+        )
+
+    def __init__(self, n_nodes, ns, nb=None, nbs=None,
+                 deq='linear', ic='gaussian', viscosity=0.0):
+        self.deq = deq
+        self.ic = ic
+        self.viscosity = viscosity
         # Interior nodes
         n = round(np.sqrt(n_nodes) + 0.49)
         self.n = n
@@ -45,44 +74,13 @@ class IVDomain(RegularDomain):
         xbn, ybn = (t.detach().cpu().numpy() for t in (xb, yb))
 
         u = problem.nn(xb, yb)
-        ub = tensor(problem.exact(xbn, ybn))
+        ub = tensor(self.exact(xbn, ybn))
         return u - ub
 
     def plot_points(self):
         n = self.ns*2
         x, y = np.mgrid[-1:1:n*1j, 0:1:n*1j]
         return x, y
-
-
-class Advection(Problem2D):
-    @classmethod
-    def from_args(cls, domain, nn, args):
-        return cls(domain, nn, args.de, args.ic, args.viscosity)
-
-    @classmethod
-    def setup_argparse(cls, parser, **kw):
-        p = parser
-        p.add_argument(
-            '--de', dest='de', default=kw.get('de', 'linear'),
-            choices=['linear', 'burgers'],
-            help='Differential equation to solve.'
-        )
-        p.add_argument(
-            '--viscosity', dest='viscosity',
-            default=kw.get('viscosity', 0.0), type=float,
-            help='Differential equation to solve.'
-        )
-        p.add_argument(
-            '--ic', dest='ic', default=kw.get('ic', 'gaussian'),
-            choices=['gaussian', 'hat', 'sin', 'sin2'],
-            help='Initial condition.'
-        )
-
-    def __init__(self, domain, nn, deq='linear', ic='gaussian',
-                 viscosity=0.0):
-        super().__init__(domain, nn, deq)
-        self.ic = ic
-        self.viscosity = viscosity
 
     def pde(self, x, y, u, ux, uy, uxx, uyy):
         if self.deq == 'linear':
@@ -111,7 +109,7 @@ class Advection(Problem2D):
 
 if __name__ == '__main__':
     app = App2D(
-        problem_cls=Advection, nn_cls=SPINN2D,
+        problem_cls=Problem2D, nn_cls=SPINN2D,
         domain_cls=IVDomain
     )
-    app.run(nodes=50, samples=200, lr=1e-2)
+    app.run(nodes=100, samples=200, lr=1e-2)

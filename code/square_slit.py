@@ -57,35 +57,19 @@ class SlitDomain(RegularDomain):
     def eval_bc(self, problem):
         xb, yb = self.boundary()
         u = problem.nn(xb, yb)
-        ub = tensor(list(map(problem.bc, xb, yb)))
+        ub = 0.0
         return u - ub
-
-
-class SlitProblem(Problem2D):
-    @classmethod
-    def from_args(cls, domain, nn, args):
-        return cls(domain, nn, None)
-
-    @classmethod
-    def setup_argparse(cls, parser, **kw):
-        pass
 
     def pde(self, x, y, u, ux, uy, uxx, uyy):
         return uxx + uyy + 1.0
 
-    def bc(self, x, y):
-        return 0.0
-
     def has_exact(self):
-        return False
-
-    def show_exact(self):
         return False
 
 
 if __name__ == '__main__':
     app = App2D(
-        problem_cls=SlitProblem, nn_cls=SPINN2D,
+        problem_cls=Problem2D, nn_cls=SPINN2D,
         domain_cls=SlitDomain
     )
     app.run(nodes=50, samples=200, lr=1e-2)

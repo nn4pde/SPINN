@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch_geometric.nn import MessagePassing
 from torch_geometric.nn import knn
 
-from spinn2d import App2D, Problem2D, RegularDomain, tensor
+from spinn2d import App2D, Problem2D, ToyDomain, tensor
 
 
 class SPHConv(MessagePassing):
@@ -26,7 +26,7 @@ class SPHConv(MessagePassing):
         return u_j*self.activation(xh, yh)
 
 
-class SPHNet(nn.Module):
+class GConvNet(nn.Module):
     @classmethod
     def from_args(cls, domain, activation, args):
         return cls(domain, activation, fixed_h=args.fixed_h,
@@ -114,7 +114,7 @@ class SPHNet(nn.Module):
 
 if __name__ == '__main__':
     app = App2D(
-        problem_cls=Problem2D, nn_cls=SPHNet,
-        domain_cls=RegularDomain
+        problem_cls=Problem2D, nn_cls=GConvNet,
+        domain_cls=ToyDomain
     )
     app.run(nodes=40, samples=120, lr=1e-2)

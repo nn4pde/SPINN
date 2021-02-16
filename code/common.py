@@ -53,6 +53,15 @@ class Domain:
     def eval_bc(self, problem):
         pass
 
+    def pde(self, *args):
+        pass
+
+    def has_exact(self):
+        return True
+
+    def exact(self, *args):
+        pass
+
 
 class Problem:
     @classmethod
@@ -95,20 +104,6 @@ class Problem:
     def show(self):
         pass
 
-    def pde(self, *args):
-        pass
-
-    def bc(self, *args):
-        pass
-
-    def has_exact(self):
-        return False
-
-    def exact(self, *args):
-        pass
-
-    def show_exact(self):
-        return True
 
 class Optimizer:
     @classmethod
@@ -166,6 +161,7 @@ class Optimizer:
         lr: float: Learming rate
         plot: bool: Plot live solution.
         out_dir: str: Output directory.
+        opt_class: Optimizer to use.
         '''
         self.problem = problem
         self.opt_class = opt_class
@@ -206,7 +202,7 @@ class Optimizer:
                 else:
                     err = problem.get_error()
                 self.errors.append(err)
-                if problem.has_exact():
+                if problem.domain.has_exact():
                     e_str = f", error={err:.3e}"
                 else:
                     e_str = ''
