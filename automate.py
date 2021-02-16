@@ -15,14 +15,18 @@ class ODE1(Problem):
 
     def setup(self):
         base_cmd = (
-            'python code/spinn1d.py -d $output_dir '
-            '--de simple -a softplus'
+            'python3 code/spinn1d.py -d $output_dir '
+            '--de simple'
         )
         self.cases = [
             Simulation(
                 root=self.input_path('n_%d' % i),
                 base_command=base_cmd,
-                nodes=i, samples=30
+                nodes=i, samples=5*i,
+                n_train=10000,
+                lr=1e-3,
+                activation='softplus',
+                no_pu=None
             )
             for i in (1, 3, 7)
         ]
@@ -55,7 +59,7 @@ class ODE2(ODE1):
 
     def setup(self):
         base_cmd = (
-            'python code/neumann1d.py -d $output_dir '
+            'python3 code/neumann1d.py -d $output_dir '
             '-a gaussian'
         )
         self.cases = [
@@ -74,7 +78,7 @@ class ODE3(ODE1):
 
     def setup(self):
         base_cmd = (
-            'python code/spinn1d.py -d $output_dir '
+            'python3 code/spinn1d.py -d $output_dir '
             '--de pulse -a softplus'
         )
         self.cases = [
