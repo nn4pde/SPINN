@@ -10,7 +10,7 @@ import torch.nn as nn
 from common import Problem, Optimizer, PDE, device, tensor
 
 
-class RegularPDE(PDE):
+class ODE(PDE):
     @classmethod
     def from_args(cls, args):
         return cls(args.nodes, args.samples)
@@ -32,10 +32,13 @@ class RegularPDE(PDE):
     def __init__(self, n, ns):
         self.n = n
         self.ns = ns
-        dxb2 = 0.5/(n + 1)
-        self.xn = np.linspace(dxb2, 1.0 - dxb2, n)
-        dxb2 = 0.5/(ns + 1)
-        self.xs = tensor(np.linspace(dxb2, 1-dxb2, ns), requires_grad=True)
+
+        self.xn = np.asarray([i/(n + 1) for i in range(1, (n + 1))])
+        self.xs = tensor(
+            [i/(ns + 1) for i in range(1, (ns + 1))],
+            requires_grad=True
+        )
+
         self.xbn = np.array([0.0, 1.0])
         self.xb = tensor(self.xbn)
 
@@ -52,8 +55,8 @@ class RegularPDE(PDE):
         return self.xb
 
     def plot_points(self):
-        n = self.ns*2
-        x = np.linspace(0.0, 1.0, n)
+        n = 26 #51
+        x = np.linspace(0.0, 1.0, n, endpoint=True)
         return x
 
     def eval_bc(self, problem):
@@ -69,7 +72,7 @@ class RegularPDE(PDE):
         pass
 
 
-class ToyPDE(RegularPDE):
+class ExactODE(ODE):
     @classmethod
     def from_args(cls, args):
         return cls(args.nodes, args.samples, args.de)
@@ -163,10 +166,10 @@ class Problem1D(Problem):
         res = pde.pde(xs, u, ux, uxx)
         bc = pde.eval_bc(self)
         bc_loss = (bc**2).sum()
-        ns = len(xs)
+        # ns = len(xs)
         loss = (
             (res**2).mean()
-            + bc_loss*ns
+            + bc_loss #*ns
         )
         return loss
 
@@ -449,6 +452,6 @@ class App1D:
 if __name__ == '__main__':
     app = App1D(
         problem_cls=Problem1D, nn_cls=SPINN1D,
-        pde_cls=ToyPDE
+        pde_cls=ExactODE
     )
     app.run(nodes=20, samples=80, lr=1e-2)

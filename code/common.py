@@ -178,7 +178,7 @@ class Optimizer:
         opt = self.opt
         opt.zero_grad()
         loss = self.problem.loss()
-        loss.backward()
+        loss.backward(retain_graph=True)
         self.loss.append(loss.item())
         return loss
 
