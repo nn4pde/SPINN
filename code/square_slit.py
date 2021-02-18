@@ -1,5 +1,8 @@
 import numpy as np
-from spinn2d import Problem2D, RegularPDE, App2D, SPINN2D, tensor
+
+from common import tensor
+from pde_basic_2d import RegularPDE
+from spinn2d import Problem2D, App2D, SPINN2D
 
 
 class SlitPDE(RegularPDE):

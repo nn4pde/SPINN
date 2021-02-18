@@ -9,13 +9,48 @@ import matplotlib
 matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 
+def _plot_1d(problem):
+    problem.make_output_dir()
+    for case in problem.cases:
+        plt.figure(figsize=(12,12))
+        font = {'size'   : 32}
+        matplotlib.rc('font', **font)
+
+        res = np.load(case.input_path('results.npz'))
+        nn_state = torch.load(case.input_path('model.pt'))
+        plt.plot(
+            res['x'], res['y_exact'],
+            color='black', linewidth=6,
+            label='Exact'
+        )
+        plt.plot(
+            res['x'], res['y'], 'ro-',
+            markersize=8, linewidth=3,
+            label='SPINN'
+        )
+        plt.xlabel(r'$x$', fontsize=32)
+        plt.ylabel(r'$u(x)$', fontsize=32)
+        plt.legend()
+        plt.grid()
+
+        cen = [0.0] + nn_state['layer1.center'].tolist() + [1.0]
+        plt.plot(
+            cen, np.zeros_like(cen), 
+            'bo', markersize=8, label='Nodes'
+        )
+        
+        plt.tight_layout()
+        plt.savefig(problem.output_path('n_%d.pdf' % case.params['nodes']))
+        plt.close()
+
+
 class ODE1(Problem):
     def get_name(self):
         return 'ode1'
 
     def setup(self):
         base_cmd = (
-            'python3 code/spinn1d.py -d $output_dir '
+            'python3 code/ode_basic.py -d $output_dir '
             '--de simple'
         )
         self.cases = [
@@ -32,38 +67,7 @@ class ODE1(Problem):
         ]
 
     def run(self):
-        self.make_output_dir()
-        for case in self.cases:
-            plt.figure(figsize=(12,12))
-            font = {'size'   : 32}
-            matplotlib.rc('font', **font)
-
-            res = np.load(case.input_path('results.npz'))
-            nn_state = torch.load(case.input_path('model.pt'))
-            plt.plot(
-                res['x'], res['y_exact'],
-                color='black', linewidth=6,
-                label='Exact'
-            )
-            plt.plot(
-                res['x'], res['y'], 'ro-',
-                markersize=8, linewidth=3,
-                label='SPINN'
-            )
-            plt.xlabel(r'$x$', fontsize=32)
-            plt.ylabel(r'$u(x)$', fontsize=32)
-            plt.legend()
-            plt.grid()
-
-            cen = [0.0] + nn_state['layer1.center'].tolist() + [1.0]
-            plt.plot(
-                cen, np.zeros_like(cen), 
-                'bo', markersize=8, label='Nodes'
-            )
-            
-            plt.tight_layout()
-            plt.savefig(self.output_path('n_%d.pdf' % case.params['nodes']))
-            plt.close()
+        _plot_1d(self)
 
 
 class ODE2(Problem):
@@ -88,38 +92,7 @@ class ODE2(Problem):
         ]
 
     def run(self):
-        self.make_output_dir()
-        for case in self.cases:
-            plt.figure(figsize=(12,12))
-            font = {'size'   : 32}
-            matplotlib.rc('font', **font)
-
-            res = np.load(case.input_path('results.npz'))
-            nn_state = torch.load(case.input_path('model.pt'))
-            plt.plot(
-                res['x'], res['y_exact'],
-                color='black', linewidth=6,
-                label='Exact'
-            )
-            plt.plot(
-                res['x'], res['y'], 'ro-',
-                markersize=8, linewidth=3,
-                label='SPINN'
-            )
-            plt.xlabel(r'$x$', fontsize=32)
-            plt.ylabel(r'$u(x)$', fontsize=32)
-            plt.legend()
-            plt.grid()
-
-            cen = [0.0] + nn_state['layer1.center'].tolist() + [1.0]
-            plt.plot(
-                cen, np.zeros_like(cen), 
-                'bo', markersize=8, label='Nodes'
-            )
-            
-            plt.tight_layout()
-            plt.savefig(self.output_path('n_%d.pdf' % case.params['nodes']))
-            plt.close()
+        _plot_1d(self)
 
 
 class ODE3(Problem):
@@ -128,7 +101,7 @@ class ODE3(Problem):
 
     def setup(self):
         base_cmd = (
-            'python3 code/spinn1d.py -d $output_dir '
+            'python3 code/ode_basic.py -d $output_dir '
             '--de pulse'
         )
         self.cases = [
@@ -145,38 +118,7 @@ class ODE3(Problem):
         ]
 
     def run(self):
-        self.make_output_dir()
-        for case in self.cases:
-            plt.figure(figsize=(12,12))
-            font = {'size'   : 32}
-            matplotlib.rc('font', **font)
-
-            res = np.load(case.input_path('results.npz'))
-            nn_state = torch.load(case.input_path('model.pt'))
-            plt.plot(
-                res['x'], res['y_exact'],
-                color='black', linewidth=6,
-                label='Exact'
-            )
-            plt.plot(
-                res['x'], res['y'], 'ro-',
-                markersize=8, linewidth=3,
-                label='SPINN'
-            )
-            plt.xlabel(r'$x$', fontsize=32)
-            plt.ylabel(r'$u(x)$', fontsize=32)
-            plt.legend()
-            plt.grid()
-
-            cen = [0.0] + nn_state['layer1.center'].tolist() + [1.0]
-            plt.plot(
-                cen, np.zeros_like(cen), 
-                'bo', markersize=8, label='Nodes'
-            )
-            
-            plt.tight_layout()
-            plt.savefig(self.output_path('n_%d.pdf' % case.params['nodes']))
-            plt.close()
+        _plot_1d(self)
 
 
 if __name__ == '__main__':

@@ -1,4 +1,3 @@
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 import os
 
 import numpy as np
@@ -7,144 +6,10 @@ import torch
 import torch.autograd as ag
 import torch.nn as nn
 
-from common import Problem, Optimizer, PDE, device, tensor
-
-
-class ODE(PDE):
-    @classmethod
-    def from_args(cls, args):
-        return cls(args.nodes, args.samples)
-
-    @classmethod
-    def setup_argparse(cls, parser, **kw):
-        p = parser
-        p.add_argument(
-            '--nodes', '-n', dest='nodes',
-            default=kw.get('nodes', 10), type=int,
-            help='Number of nodes to use.'
-        )
-        p.add_argument(
-            '--samples', '-s', dest='samples',
-            default=kw.get('samples', 30), type=int,
-            help='Number of sample points to use.'
-        )
-
-    def __init__(self, n, ns):
-        self.n = n
-        self.ns = ns
-
-        self.xn = np.asarray([i/(n + 1) for i in range(1, (n + 1))])
-        self.xs = tensor(
-            [i/(ns + 1) for i in range(1, (ns + 1))],
-            requires_grad=True
-        )
-
-        self.xbn = np.array([0.0, 1.0])
-        self.xb = tensor(self.xbn)
-
-    def nodes(self):
-        return self.xn
-
-    def fixed_nodes(self):
-        return self.xbn
-
-    def interior(self):
-        return self.xs
-
-    def boundary(self):
-        return self.xb
-
-    def plot_points(self):
-        n = 26 #51
-        x = np.linspace(0.0, 1.0, n, endpoint=True)
-        return x
-
-    def eval_bc(self, problem):
-        u = problem.nn(self.boundary())
-        ub = tensor(self.exact(self.xbn))
-        return u - ub
-
-    # ####### Override these for different differential equations
-    def pde(self, x, u, ux, uxx):
-        raise NotImplementedError()
-
-    def exact(self, x, y):
-        pass
-
-
-class ExactODE(ODE):
-    @classmethod
-    def from_args(cls, args):
-        return cls(args.nodes, args.samples, args.de)
-
-    @classmethod
-    def setup_argparse(cls, parser, **kw):
-        super().setup_argparse(parser, **kw)
-        p = parser
-        p.add_argument(
-            '--de', dest='de', default=kw.get('de', 'sin8'),
-            choices=['sin8', 'pulse', 'simple'],
-            help='Differential equation to solve.'
-        )
-
-    def __init__(self, n, ns, deq):
-        super().__init__(n, ns)
-        self.deq = deq
-
-    def pde(self, x, u, ux, uxx):
-        if self.deq == 'pulse':
-            K = 0.01
-            f = -(K*(-6*x + 4/3.) +
-                  x*(2*x - 2./3)**2)*torch.exp(-(x - 1/3.)**2/K)/K**2
-            return uxx + f
-        elif self.deq == 'sin8':
-            return uxx + torch.sin(8.0*np.pi*x)
-        elif self.deq == 'simple':
-            return uxx + 1.0
-
-    def exact(self, x):
-        if self.deq == 'pulse':
-            K = 0.01
-            return x*(np.exp(-((x - (1.0/3.0))**2)/K) -
-                      np.exp(-4.0/(9.0*K)))
-        elif self.deq == 'sin8':
-            return np.sin(8.0*np.pi*x)/(64.0*np.pi**2)
-        elif self.deq == 'simple':
-            return 0.5*x*(1.0 - x)
+from common import Problem, App, tensor
 
 
 class Problem1D(Problem):
-
-    @classmethod
-    def from_args(cls, pde, nn, args):
-        return cls(pde, nn, args.no_show_exact)
-
-    @classmethod
-    def setup_argparse(cls, parser, **kw):
-        p = parser
-        p.add_argument(
-            '--no-show-exact', dest='no_show_exact',
-            action='store_true', default=False,
-            help='Do not show exact solution even if available.'
-        )
-
-    def __init__(self, pde, nn, no_show_exact=False):
-        '''Initializer
-
-        Parameters
-        -----------
-
-        pde: PDE: object managing the pde.
-        nn: Neural network for the solution
-        eq: DiffEq: Differential equation to evaluate.
-        no_show_exact: bool: Show exact solution or not.
-        '''
-        self.pde = pde
-        self.nn = nn
-        self.plt1 = None
-        self.plt2 = None  # For weights
-        self.show_exact = not no_show_exact
-
     def _compute_derivatives(self, u, x):
         du = ag.grad(
             outputs=u, inputs=x, grad_outputs=torch.ones_like(u),
@@ -368,38 +233,7 @@ class Kernel(nn.Module):
         return x
 
 
-class App1D:
-    def __init__(self, problem_cls, nn_cls, pde_cls,
-                 optimizer=Optimizer):
-        self.problem_cls = problem_cls
-        self.nn_cls = nn_cls
-        self.pde_cls = pde_cls
-        self.optimizer = optimizer
-
-    def setup_argparse(self, **kw):
-        '''Setup the argument parser.
-
-        Any keyword arguments are used as the default values for the
-        parameters.
-        '''
-        p = ArgumentParser(
-            description="Configurable options.",
-            formatter_class=ArgumentDefaultsHelpFormatter
-        )
-        p.add_argument(
-            '--gpu', dest='gpu', action='store_true',
-            default=kw.get('gpu', False),
-            help='Run code on the GPU.'
-        )
-        classes = (
-            self.pde_cls, self.problem_cls, self.nn_cls, self.optimizer
-        )
-        for c in classes:
-            c.setup_argparse(p, **kw)
-
-        self._setup_activation_options(p)
-        return p
-
+class App1D(App):
     def _setup_activation_options(self, p, **kw):
         # Differential equation to solve.
         p.add_argument(
@@ -422,36 +256,4 @@ class App1D:
             'kernel': Kernel
         }
         return activations[args.activation](args.kernel_size)
-
-    def run(self, args=None, **kw):
-        parser = self.setup_argparse(**kw)
-        args = parser.parse_args(args)
-
-        if args.gpu:
-            device("cuda")
-        else:
-            device("cpu")
-
-        activation = self._get_activation(args)
-
-        dev = device()
-        pde = self.pde_cls.from_args(args)
-        self.pde = pde
-        nn = self.nn_cls.from_args(pde, activation, args).to(dev)
-        self.nn = nn
-        p = self.problem_cls.from_args(pde, nn, args)
-        self.problem = p
-        solver = self.optimizer.from_args(p, args)
-        self.solver = solver
-        solver.solve()
-
-        if args.directory is not None:
-            solver.save()
-
-
-if __name__ == '__main__':
-    app = App1D(
-        problem_cls=Problem1D, nn_cls=SPINN1D,
-        pde_cls=ExactODE
-    )
-    app.run(nodes=20, samples=80, lr=1e-2)
+        

@@ -1,7 +1,10 @@
 import numpy as np
+
 import torch
-from spinn1d import ODE, App1D, SPINN1D, Problem1D, tensor
 import torch.autograd as ag
+
+from spinn1d import App1D, SPINN1D, Problem1D, tensor
+from ode_basic import ODE
 
 
 class MyODE(ODE):

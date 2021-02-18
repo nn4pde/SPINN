@@ -5,6 +5,8 @@ import numpy as np
 import torch
 import torch.optim as optim
 
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+
 
 _device = torch.device("cpu")
 
@@ -65,12 +67,34 @@ class PDE:
 
 class Problem:
     @classmethod
-    def from_args(cls, nn, args):
-        pass
+    def from_args(cls, pde, nn, args):
+        return cls(pde, nn, args.no_show_exact)
 
     @classmethod
     def setup_argparse(cls, parser, **kw):
-        pass
+        p = parser
+        p.add_argument(
+            '--no-show-exact', dest='no_show_exact',
+            action='store_true', default=False,
+            help='Do not show exact solution even if available.'
+        )
+
+    def __init__(self, pde, nn, no_show_exact=False):
+        '''Initializer
+
+        Parameters
+        -----------
+
+        pde: PDE: object managing the pde.
+        nn: Neural network for the solution
+        eq: DiffEq: Differential equation to evaluate.
+        no_show_exact: bool: Show exact solution or not.
+        '''
+        self.pde = pde
+        self.nn = nn
+        self.plt1 = None
+        self.plt2 = None  # For weights
+        self.show_exact = not no_show_exact
 
     def loss(self):
         '''Return the loss.
@@ -227,3 +251,61 @@ class Optimizer:
             time_taken=self.time_taken
         )
         self.problem.save(dirname)
+
+
+class App:
+    def __init__(self, problem_cls, nn_cls, pde_cls,
+                 optimizer=Optimizer):
+        self.problem_cls = problem_cls
+        self.nn_cls = nn_cls
+        self.pde_cls = pde_cls
+        self.optimizer = optimizer
+
+    def setup_argparse(self, **kw):
+        '''Setup the argument parser.
+
+        Any keyword arguments are used as the default values for the
+        parameters.
+        '''
+        p = ArgumentParser(
+            description="Configurable options.",
+            formatter_class=ArgumentDefaultsHelpFormatter
+        )
+        p.add_argument(
+            '--gpu', dest='gpu', action='store_true',
+            default=kw.get('gpu', False),
+            help='Run code on the GPU.'
+        )
+        classes = (
+            self.pde_cls, self.problem_cls, self.nn_cls, self.optimizer
+        )
+        for c in classes:
+            c.setup_argparse(p, **kw)
+
+        self._setup_activation_options(p)
+        return p
+
+    def run(self, args=None, **kw):
+        parser = self.setup_argparse(**kw)
+        args = parser.parse_args(args)
+
+        if args.gpu:
+            device("cuda")
+        else:
+            device("cpu")
+
+        activation = self._get_activation(args)
+
+        dev = device()
+        pde = self.pde_cls.from_args(args)
+        self.pde = pde
+        nn = self.nn_cls.from_args(pde, activation, args).to(dev)
+        self.nn = nn
+        p = self.problem_cls.from_args(pde, nn, args)
+        self.problem = p
+        solver = self.optimizer.from_args(p, args)
+        self.solver = solver
+        solver.solve()
+
+        if args.directory is not None:
+            solver.save()
