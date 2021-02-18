@@ -12,25 +12,6 @@ from pde2d_base import RegularPDE
 PI = np.pi
 
 class Poisson2D(RegularPDE):
-    @classmethod
-    def from_args(cls, args):
-        return cls(args.nodes, args.samples,
-                   args.b_nodes, args.b_samples, args.de)
-
-    @classmethod
-    def setup_argparse(cls, parser, **kw):
-        super().setup_argparse(parser, **kw)
-        p = parser
-        p.add_argument(
-            '--de', dest='de', default=kw.get('de', 'sin2'),
-            choices=['sin2', 'bump'],
-            help='Differential equation to solve.'
-        )
-
-    def __init__(self, n_nodes, ns, nb=None, nbs=None, de='bump'):
-        super().__init__(n_nodes, ns, nb=nb, nbs=nbs)
-        self.deq = de
-
     def pde(self, x, y, u, ux, uy, uxx, uyy):
         f = 20*PI**2*torch.sin(2*PI*x)*torch.sin(4*PI*y)
         return 0.1*(uxx + uyy + f)
