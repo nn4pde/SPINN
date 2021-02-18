@@ -1,7 +1,7 @@
 import numpy as np
 from common import tensor
-from pde_basic_2d import RegularPDE
-from spinn2d import Problem2D, App2D, SPINN2D, tensor
+from pde2d_base import RegularPDE
+from spinn2d import Plotter2D, App2D, SPINN2D
 
 
 class IVPDE(RegularPDE):
@@ -71,14 +71,6 @@ class IVPDE(RegularPDE):
         xb, yb = (tensor(t.ravel(), requires_grad=True) for t in (x, y))
         self.b_samples = (xb, yb)
 
-    def eval_bc(self, problem):
-        xb, yb = self.boundary()
-        xbn, ybn = (t.detach().cpu().numpy() for t in (xb, yb))
-
-        u = problem.nn(xb, yb)
-        ub = tensor(self.exact(xbn, ybn))
-        return u - ub
-
     def plot_points(self):
         n = self.ns*2
         x, y = np.mgrid[-1:1:n*1j, 0:1:n*1j]
@@ -90,6 +82,9 @@ class IVPDE(RegularPDE):
             return uy + a*ux
         elif self.deq == 'burgers':
             return uy + u*ux - self.viscosity*uxx
+
+    def has_exact(self):
+        return True
 
     def exact(self, x, y):
         a = 0.5
@@ -108,10 +103,19 @@ class IVPDE(RegularPDE):
             y = np.heaviside(x1, 0.5) - np.heaviside(x1 - 0.5, 0.5)
             return np.sin(x1*np.pi*4*y)
 
+    def boundary_loss(self, nn):
+        xb, yb = self.boundary()
+        xbn, ybn = (t.detach().cpu().numpy() for t in (xb, yb))
+
+        u = nn(xb, yb)
+        ub = tensor(self.exact(xbn, ybn))
+        bc = u - ub
+        return (bc**2).sum()
+
 
 if __name__ == '__main__':
     app = App2D(
-        problem_cls=Problem2D, nn_cls=SPINN2D,
-        pde_cls=IVPDE
+        pde_cls=IVPDE, nn_cls=SPINN2D,
+        plotter_cls=Plotter2D
     )
     app.run(nodes=100, samples=200, lr=1e-2)

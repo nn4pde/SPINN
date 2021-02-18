@@ -6,8 +6,8 @@ from torch_geometric.nn import MessagePassing
 from torch_geometric.nn import knn
 
 from common import tensor
-from pde_basic_2d import ExactPDE
-from spinn2d import App2D, Problem2D
+from spinn2d import App2D, Plotter2D
+from poisson2d_sine import Poisson2D
 
 
 class SPHConv(MessagePassing):
@@ -116,7 +116,7 @@ class GConvNet(nn.Module):
 
 if __name__ == '__main__':
     app = App2D(
-        problem_cls=Problem2D, nn_cls=GConvNet,
-        pde_cls=ExactPDE
+        pde_cls=Poisson2D, nn_cls=GConvNet,
+        plotter_cls=Plotter2D
     )
     app.run(nodes=40, samples=120, lr=1e-2)

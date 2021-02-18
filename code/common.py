@@ -52,11 +52,9 @@ class PDE:
     def plot_points(self):
         pass
 
-    def eval_bc(self, problem):
-        pass
-
+    ## Override these for different differential equations ############
     def pde(self, *args):
-        pass
+        raise NotImplementedError()
 
     def has_exact(self):
         return True
@@ -64,8 +62,27 @@ class PDE:
     def exact(self, *args):
         pass
 
+    def interior_loss(self, nn):
+        raise NotImplementedError()
 
-class Problem:
+    def boundary_loss(self, nn):
+        raise NotImplementedError()
+
+    ###################################################################
+
+    def loss(self, nn):
+        '''Total loss is computed by default as
+           (interior loss + boundary loss)
+        '''
+        loss_int = self.interior_loss(nn)
+        loss_bdy = self.boundary_loss(nn)
+        loss = loss_int + loss_bdy
+        return loss
+
+    def _compute_derivatives(self, u, x):
+        raise NotImplementedError()
+    
+class Plotter:
     @classmethod
     def from_args(cls, pde, nn, args):
         return cls(pde, nn, args.no_show_exact)
@@ -95,11 +112,6 @@ class Problem:
         self.plt1 = None
         self.plt2 = None  # For weights
         self.show_exact = not no_show_exact
-
-    def loss(self):
-        '''Return the loss.
-        '''
-        raise NotImplementedError()
 
     def get_plot_data(self):
         pass
@@ -131,11 +143,11 @@ class Problem:
 
 class Optimizer:
     @classmethod
-    def from_args(cls, case, args):
+    def from_args(cls, pde, nn, plotter, args):
         optimizers = {'Adam': optim.Adam, 'LBFGS': optim.LBFGS}
         o = optimizers[args.optimizer]
         return cls(
-            case, n_train=args.n_train,
+            pde, nn, plotter, n_train=args.n_train,
             n_skip=args.n_skip, lr=args.lr, plot=args.plot,
             out_dir=args.directory, opt_class=o
         )
@@ -172,14 +184,16 @@ class Optimizer:
             help='Output directory (output files are dumped here).'
         )
 
-    def __init__(self, problem, n_train, n_skip=100, lr=1e-2, plot=True,
+    def __init__(self, pde, nn, plotter, n_train, n_skip=100, lr=1e-2, plot=True,
                  out_dir=None, opt_class=optim.Adam):
         '''Initializer
 
         Parameters
         -----------
 
-        problem: Problem: The problem case being solved.
+        pde: Solver: The problem being solved
+        nn: SPINN1D/SPINN2D/...: Neural Network class.
+        plotter: Plotter: Handles all the plotting
         n_train: int: Training steps
         n_skip: int: Print loss every so often.
         lr: float: Learming rate
@@ -187,7 +201,11 @@ class Optimizer:
         out_dir: str: Output directory.
         opt_class: Optimizer to use.
         '''
-        self.problem = problem
+
+        self.pde = pde
+        self.nn = nn
+        self.plotter = plotter
+
         self.opt_class = opt_class
         self.errors = []
         self.loss = []
@@ -201,41 +219,40 @@ class Optimizer:
     def closure(self):
         opt = self.opt
         opt.zero_grad()
-        loss = self.problem.loss()
+        loss = self.pde.loss(self.nn)
         loss.backward(retain_graph=True)
         self.loss.append(loss.item())
         return loss
 
     def solve(self):
-        problem = self.problem
+        plotter = self.plotter
         n_train = self.n_train
         n_skip = self.n_skip
-        opt = self.opt_class(problem.nn.parameters(), lr=self.lr)
+        opt = self.opt_class(self.nn.parameters(), lr=self.lr)
         self.opt = opt
         if self.plot:
-            problem.plot()
+            plotter.plot()
 
         start = time.perf_counter()
         for i in range(1, n_train+1):
-            opt.step(self.closure)
+            loss = opt.step(self.closure)
             if i % n_skip == 0 or i == n_train:
-                loss = self.problem.loss()
                 err = 0.0
                 if self.plot:
-                    err = problem.plot()
+                    err = plotter.plot()
                 else:
-                    err = problem.get_error()
+                    err = plotter.get_error()
                 self.errors.append(err)
-                if problem.pde.has_exact():
+                if self.pde.has_exact():
                     e_str = f", error={err:.3e}"
                 else:
                     e_str = ''
-                print(f"Iteration ({i}/{n_train}): Loss={loss:.3e}" + e_str)
+                print(f"Iteration ({i}/{n_train}): Loss={loss.item():.3e}" + e_str)
         time_taken = time.perf_counter() - start
         self.time_taken = time_taken
         print(f"Done. Took {time_taken:.3f} seconds.")
         if self.plot:
-            problem.show()
+            plotter.show()
 
     def save(self):
         dirname = self.out_dir
@@ -250,16 +267,22 @@ class Optimizer:
             fname, loss=self.loss, error=self.errors,
             time_taken=self.time_taken
         )
-        self.problem.save(dirname)
+        self.plotter.save(dirname)
 
 
 class App:
-    def __init__(self, problem_cls, nn_cls, pde_cls,
+    def __init__(self, pde_cls, nn_cls, plotter_cls,
                  optimizer=Optimizer):
-        self.problem_cls = problem_cls
-        self.nn_cls = nn_cls
         self.pde_cls = pde_cls
+        self.nn_cls = nn_cls
+        self.plotter_cls = plotter_cls
         self.optimizer = optimizer
+
+    def _setup_activation_options(self, p, **kw):
+        pass
+
+    def _get_activation(self, args):
+        pass
 
     def setup_argparse(self, **kw):
         '''Setup the argument parser.
@@ -277,7 +300,7 @@ class App:
             help='Run code on the GPU.'
         )
         classes = (
-            self.pde_cls, self.problem_cls, self.nn_cls, self.optimizer
+            self.pde_cls, self.nn_cls, self.plotter_cls, self.optimizer
         )
         for c in classes:
             c.setup_argparse(p, **kw)
@@ -296,16 +319,17 @@ class App:
 
         activation = self._get_activation(args)
 
-        dev = device()
         pde = self.pde_cls.from_args(args)
         self.pde = pde
+        dev = device()
         nn = self.nn_cls.from_args(pde, activation, args).to(dev)
         self.nn = nn
-        p = self.problem_cls.from_args(pde, nn, args)
-        self.problem = p
-        solver = self.optimizer.from_args(p, args)
-        self.solver = solver
-        solver.solve()
+        plotter = self.plotter_cls.from_args(pde, nn, args)
+        self.plotter = plotter
 
+        solver = self.optimizer.from_args(pde, nn, plotter, args)
+        self.solver = solver
+
+        solver.solve()
         if args.directory is not None:
             solver.save()

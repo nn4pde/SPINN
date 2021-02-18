@@ -3,41 +3,12 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-import torch.autograd as ag
 import torch.nn as nn
 
-from common import Problem, App, tensor
+from common import Plotter, App, tensor
 
 
-class Problem1D(Problem):
-    def _compute_derivatives(self, u, x):
-        du = ag.grad(
-            outputs=u, inputs=x, grad_outputs=torch.ones_like(u),
-            retain_graph=True, create_graph=True, allow_unused=True
-        )
-
-        d2u = ag.grad(
-            outputs=du, inputs=x, grad_outputs=torch.ones_like(du[0]),
-            retain_graph=True, create_graph=True, allow_unused=True
-        )
-        return u, du[0], d2u[0]
-
-    def loss(self):
-        pde = self.pde
-        nn = self.nn
-        xs = pde.interior()
-        u = nn(xs)
-        u, ux, uxx = self._compute_derivatives(u, xs)
-        res = pde.pde(xs, u, ux, uxx)
-        bc = pde.eval_bc(self)
-        bc_loss = (bc**2).sum()
-        # ns = len(xs)
-        loss = (
-            (res**2).mean()
-            + bc_loss #*ns
-        )
-        return loss
-
+class Plotter1D(Plotter):
     def get_error(self, xn=None, pn=None):
         if not self.pde.has_exact():
             return 0.0
@@ -235,7 +206,6 @@ class Kernel(nn.Module):
 
 class App1D(App):
     def _setup_activation_options(self, p, **kw):
-        # Differential equation to solve.
         p.add_argument(
             '--activation', '-a', dest='activation',
             default=kw.get('activation', 'gaussian'),
@@ -256,4 +226,4 @@ class App1D(App):
             'kernel': Kernel
         }
         return activations[args.activation](args.kernel_size)
-        
+

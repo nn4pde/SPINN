@@ -50,8 +50,7 @@ class ODE1(Problem):
 
     def setup(self):
         base_cmd = (
-            'python3 code/ode_basic.py -d $output_dir '
-            '--de simple'
+            'python3 code/ode1.py -d $output_dir '
         )
         self.cases = [
             Simulation(
@@ -76,7 +75,7 @@ class ODE2(Problem):
 
     def setup(self):
         base_cmd = (
-            'python3 code/neumann1d.py -d $output_dir '
+            'python3 code/ode2.py -d $output_dir '
         )
         self.cases = [
             Simulation(
@@ -101,8 +100,7 @@ class ODE3(Problem):
 
     def setup(self):
         base_cmd = (
-            'python3 code/ode_basic.py -d $output_dir '
-            '--de pulse'
+            'python3 code/ode3.py -d $output_dir '
         )
         self.cases = [
             Simulation(

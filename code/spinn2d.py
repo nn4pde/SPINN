@@ -6,41 +6,10 @@ import torch
 import torch.autograd as ag
 import torch.nn as nn
 
-from common import App, Problem, tensor
+from common import App, Plotter, tensor
 
 
-class Problem2D(Problem):
-    def _compute_derivatives(self, u, xs, ys):
-        du = ag.grad(
-            outputs=u, inputs=(xs, ys), grad_outputs=torch.ones_like(u),
-            retain_graph=True, create_graph=True
-        )
-        d2ux = ag.grad(
-            outputs=du[0], inputs=(xs, ys),
-            grad_outputs=torch.ones_like(du[0]),
-            retain_graph=True, create_graph=True
-        )
-        d2uy = ag.grad(
-            outputs=du[1], inputs=(xs, ys),
-            grad_outputs=torch.ones_like(du[1]),
-            retain_graph=True, create_graph=True
-        )
-
-        return u, du[0], du[1], d2ux[0],  d2uy[1]
-
-    def loss(self):
-        pde = self.pde
-        nn = self.nn
-        xs, ys = pde.interior()
-        u = nn(xs, ys)
-        u, ux, uy, uxx, uyy = self._compute_derivatives(u, xs, ys)
-        res = pde.pde(xs, ys, u, ux, uy, uxx, uyy)
-        l1 = (res**2).mean()
-        bc = pde.eval_bc(self)
-        bc_loss = (bc**2).sum()
-        loss = l1 + bc_loss
-        return loss
-
+class Plotter2D(Plotter):
     def get_error(self, xn=None, yn=None, pn=None):
         if not self.pde.has_exact():
             return 0.0

@@ -1,11 +1,11 @@
 import numpy as np
 
 from common import tensor
-from pde_basic_2d import RegularPDE
-from spinn2d import Problem2D, App2D, SPINN2D
+from pde2d_base import RegularPDE
+from spinn2d import Plotter2D, App2D, SPINN2D
 
 
-class SlitPDE(RegularPDE):
+class SquareSlit(RegularPDE):
     def __init__(self, n_nodes, ns, nb=None, nbs=None):
         # Interior nodes
         n = round(np.sqrt(n_nodes) + 0.49)
@@ -57,22 +57,23 @@ class SlitPDE(RegularPDE):
         x, y = np.mgrid[-1:1:n*1j, -1:1:n*1j]
         return x, y
 
-    def eval_bc(self, problem):
-        xb, yb = self.boundary()
-        u = problem.nn(xb, yb)
-        ub = 0.0
-        return u - ub
-
     def pde(self, x, y, u, ux, uy, uxx, uyy):
         return uxx + uyy + 1.0
 
     def has_exact(self):
         return False
 
+    def boundary_loss(self, nn):
+        xb, yb = self.boundary()
+        u = nn(xb, yb)
+        ub = 0.0
+        bc = u - ub
+        return (bc**2).sum()
+
 
 if __name__ == '__main__':
     app = App2D(
-        problem_cls=Problem2D, nn_cls=SPINN2D,
-        pde_cls=SlitPDE
+        pde_cls=SquareSlit, nn_cls=SPINN2D,
+        plotter_cls=Plotter2D
     )
     app.run(nodes=50, samples=200, lr=1e-2)

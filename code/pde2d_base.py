@@ -2,10 +2,9 @@
 
 import numpy as np
 import torch
+import torch.autograd as ag
 from common import PDE, tensor
-from spinn2d import Problem2D, SPINN2D, App2D
-
-PI = np.pi
+from spinn2d import Plotter2D, SPINN2D, App2D
 
 
 class RegularPDE(PDE):
@@ -37,6 +36,24 @@ class RegularPDE(PDE):
             default=kw.get('b_samples', None), type=int,
             help='Number of boundary samples to use per edge.'
         )
+
+    def _compute_derivatives(self, u, xs, ys):
+        du = ag.grad(
+            outputs=u, inputs=(xs, ys), grad_outputs=torch.ones_like(u),
+            retain_graph=True, create_graph=True
+        )
+        d2ux = ag.grad(
+            outputs=du[0], inputs=(xs, ys),
+            grad_outputs=torch.ones_like(du[0]),
+            retain_graph=True, create_graph=True
+        )
+        d2uy = ag.grad(
+            outputs=du[1], inputs=(xs, ys),
+            grad_outputs=torch.ones_like(du[1]),
+            retain_graph=True, create_graph=True
+        )
+
+        return u, du[0], du[1], d2ux[0],  d2uy[1]
 
     def __init__(self, n_nodes, ns, nb=None, nbs=None):
         # Interior nodes
@@ -94,66 +111,9 @@ class RegularPDE(PDE):
         x, y = np.mgrid[0:1:n*1j, 0:1:n*1j]
         return x, y
 
-    def eval_bc(self, problem):
-        xb, yb = self.boundary()
-        xbn, ybn = (t.detach().cpu().numpy() for t in (xb, yb))
-
-        u = problem.nn(xb, yb)
-        ub = tensor(self.exact(xbn, ybn))
-        return u - ub
-
-    def pde(self, x, y, u, ux, uy, uxx, uyy):
-        raise NotImplementedError()
-
-    def exact(self, x, y):
-        pass
-
-
-class ExactPDE(RegularPDE):
-    @classmethod
-    def from_args(cls, args):
-        return cls(args.nodes, args.samples,
-                   args.b_nodes, args.b_samples, args.de)
-
-    @classmethod
-    def setup_argparse(cls, parser, **kw):
-        super().setup_argparse(parser, **kw)
-        p = parser
-        p.add_argument(
-            '--de', dest='de', default=kw.get('de', 'sin2'),
-            choices=['sin2', 'bump'],
-            help='Differential equation to solve.'
-        )
-
-    def __init__(self, n_nodes, ns, nb=None, nbs=None, de='bump'):
-        super().__init__(n_nodes, ns, nb=nb, nbs=nbs)
-        self.deq = de
-
-    def pde(self, x, y, u, ux, uy, uxx, uyy):
-        if self.deq == 'sin2':
-            f = 20*PI**2*torch.sin(2*PI*x)*torch.sin(4*PI*y)
-            return 0.1*(uxx + uyy + f)
-        elif self.deq == 'bump':
-            K = 0.05
-            ex = torch.exp(-(x - 0.25)*(x - 0.25)/K)
-            fxx = (
-                (1.0 + ((1.0 - 2.0*x)*(x - 0.25) + x*(1.0 - x))/K)
-                + ((1.0 - 2.0*x - 2.0*x*(1 - x)*(x - 0.25)/K)*(x - 0.25)/K)
-            )*2.0*ex*y*(1 - y)
-            fyy = 2.0*x*(1.0 - x)*ex
-            return uxx + uyy + fxx + fyy
-
-    def exact(self, x, y):
-        if self.deq == 'sin2':
-            return np.sin(2*PI*x)*np.sin(4*PI*y)
-        elif self.deq == 'bump':
-            K = 0.05
-            return x*(1.0 - x)*y*(1.0 - y)*np.exp(-(x - 0.25)*(x - 0.25)/K)
-
-
-if __name__ == '__main__':
-    app = App2D(
-        problem_cls=Problem2D, nn_cls=SPINN2D,
-        pde_cls=ExactPDE
-    )
-    app.run(nodes=40, samples=120, lr=1e-2)
+    def interior_loss(self, nn):
+        xs, ys = self.interior()
+        u = nn(xs, ys)
+        u, ux, uy, uxx, uyy = self._compute_derivatives(u, xs, ys)
+        res = self.pde(xs, ys, u, ux, uy, uxx, uyy)
+        return (res**2).mean()

@@ -1,9 +1,11 @@
 # Poisson equation on a general domain
 
 import numpy as np
+import torch
+import torch.autograd as ag
 from mayavi import mlab
 from common import PDE, tensor
-from spinn2d import Problem2D, App2D, SPINN2D
+from spinn2d import Plotter2D, App2D, SPINN2D
 
 class Poisson2D(PDE):
     @classmethod
@@ -33,6 +35,24 @@ class Poisson2D(PDE):
             default=kw.get('f_samples_bdy', 'mesh_data/boundary_samples.dat'), type=str,
             help='File containing boundary samples.'
         )
+
+    def _compute_derivatives(self, u, xs, ys):
+        du = ag.grad(
+            outputs=u, inputs=(xs, ys), grad_outputs=torch.ones_like(u),
+            retain_graph=True, create_graph=True
+        )
+        d2ux = ag.grad(
+            outputs=du[0], inputs=(xs, ys),
+            grad_outputs=torch.ones_like(du[0]),
+            retain_graph=True, create_graph=True
+        )
+        d2uy = ag.grad(
+            outputs=du[1], inputs=(xs, ys),
+            grad_outputs=torch.ones_like(du[1]),
+            retain_graph=True, create_graph=True
+        )
+
+        return u, du[0], du[1], d2ux[0],  d2uy[1]
 
     def _extract_coordinates(self, f_pts):
         xs = []
@@ -95,19 +115,27 @@ class Poisson2D(PDE):
         xi, yi = self._extract_coordinates(self.f_samples_int)
         return (tensor(xi), tensor(yi))
 
-    def eval_bc(self, problem):
-        xb, tb = self.boundary()
-        u = problem.nn(xb, tb)
-        ub = 0.0
-        return u - ub
-
     def pde(self, x, y, u, ux, uy, uxx, uyy):
         return uxx + uyy + 1.0
 
     def has_exact(self):
         return False
 
-class PoissonProblem(Problem2D):
+    def interior_loss(self, nn):
+        xs, ys = self.interior()
+        u = nn(xs, ys)
+        u, ux, uy, uxx, uyy = self._compute_derivatives(u, xs, ys)
+        res = self.pde(xs, ys, u, ux, uy, uxx, uyy)
+        return (res**2).mean()
+
+    def boundary_loss(self, nn):
+        xb, tb = self.boundary()
+        u = nn(xb, tb)
+        ub = 0.0
+        bc = u - ub
+        return (bc**2).sum()
+
+class PointCloud(Plotter2D):
     def get_plot_data(self):
         x, y = self.pde.plot_points()
         pn = self.nn(x, y).detach().cpu().numpy()
@@ -128,8 +156,8 @@ class PoissonProblem(Problem2D):
 
 if __name__ == '__main__':
     app = App2D(
-        problem_cls=PoissonProblem,
+        pde_cls=Poisson2D,
         nn_cls=SPINN2D,
-        pde_cls=Poisson2D
+        plotter_cls=PointCloud
     )
-    app.run(lr=1e-2)
+    app.run(lr=1e-3)
