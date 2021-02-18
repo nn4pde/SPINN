@@ -25,7 +25,11 @@ class Advection1D(IBVP2D):
             help='Initial profiles for linear advection equation.'
         )
 
-    def __init__(self, n, ns, nb, nbs, xL, xR, T, ic):
+    def __init__(self, n, ns, 
+        nb=None, nbs=None, 
+        xL=0.0, xR=1.0, T=10, 
+        ic='gaussian'):
+
         super().__init__(n, ns, nb, nbs, xL, xR, T)
         self.ic = ic
 
