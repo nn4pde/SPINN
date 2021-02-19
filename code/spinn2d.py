@@ -27,7 +27,7 @@ class Plotter2D(Plotter):
         torch.save(self.nn.state_dict(), modelfname)
         rfile = os.path.join(dirname, 'results.npz')
         x, y, u = self.get_plot_data()
-        u_exact = self.exact(x, y)
+        u_exact = self.pde.exact(x, y)
         np.savez(rfile, x=x, y=y, u=u, u_exact=u_exact)
 
     # Plotting methods
