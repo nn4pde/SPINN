@@ -52,7 +52,16 @@ class PDE:
     def plot_points(self):
         pass
 
-    ## Override these for different differential equations ############
+    # #### Override these for different differential equations ############
+    def n_vars(self):
+        '''Return the number of variables per point in your PDE.
+
+        For example, for scalar equations, return 1 (which is the default). For
+        a system of 3 equations return 3.
+
+        '''
+        return 1
+
     def pde(self, *args):
         raise NotImplementedError()
 
@@ -81,7 +90,8 @@ class PDE:
 
     def _compute_derivatives(self, u, x):
         raise NotImplementedError()
-    
+
+
 class Plotter:
     @classmethod
     def from_args(cls, pde, nn, args):
@@ -184,8 +194,8 @@ class Optimizer:
             help='Output directory (output files are dumped here).'
         )
 
-    def __init__(self, pde, nn, plotter, n_train, n_skip=100, lr=1e-2, plot=True,
-                 out_dir=None, opt_class=optim.Adam):
+    def __init__(self, pde, nn, plotter, n_train, n_skip=100, lr=1e-2,
+                 plot=True, out_dir=None, opt_class=optim.Adam):
         '''Initializer
 
         Parameters
@@ -247,7 +257,10 @@ class Optimizer:
                     e_str = f", error={err:.3e}"
                 else:
                     e_str = ''
-                print(f"Iteration ({i}/{n_train}): Loss={loss.item():.3e}" + e_str)
+                print(
+                    f"Iteration ({i}/{n_train}): Loss={loss.item():.3e}" +
+                    e_str
+                )
         time_taken = time.perf_counter() - start
         self.time_taken = time_taken
         print(f"Done. Took {time_taken:.3f} seconds.")

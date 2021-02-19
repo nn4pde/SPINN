@@ -133,7 +133,7 @@ class SPINN1D(nn.Module):
                             fixed_h=fixed_h)
         n = self.layer1.n
         self.activation = activation
-        self.layer2 = nn.Linear(n, 1, bias=not use_pu)
+        self.layer2 = nn.Linear(n, pde.n_vars(), bias=not use_pu)
         self.layer2.weight.data.fill_(0.0)
         if not self.use_pu:
             self.layer2.bias.data.fill_(0.0)
@@ -168,7 +168,7 @@ class SPINN1D(nn.Module):
 # Activation functions
 
 def gaussian(x):
-    return torch.exp(-x*x)
+    return torch.exp(-0.5*x*x)
 
 
 class SoftPlus:

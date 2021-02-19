@@ -83,7 +83,11 @@ class GConvNet(nn.Module):
         else:
             self.h = nn.Parameter(dx*tensor(np.ones(self.n)))
 
-        self.u = nn.Parameter(tensor(np.zeros(self.n)))
+        n_vars = pde.n_vars()
+        if n_vars > 1:
+            self.u = nn.Parameter(tensor(np.zeros((self.n, n_vars))))
+        else:
+            self.u = nn.Parameter(tensor(np.zeros(self.n)))
         self.sph = SPHConv(self.activation)
 
     def forward(self, x, y):

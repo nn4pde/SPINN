@@ -3,7 +3,6 @@ import sys
 from mayavi import mlab
 import numpy as np
 import torch
-import torch.autograd as ag
 import torch.nn as nn
 
 from common import App, Plotter, tensor
@@ -142,8 +141,7 @@ class SPINN2D(nn.Module):
             help='Use a partition of unity.'
         )
 
-    def __init__(self, pde, activation, n_outputs=1,
-                 fixed_h=False, use_pu=False):
+    def __init__(self, pde, activation, fixed_h=False, use_pu=False):
         super().__init__()
 
         self.activation = activation
@@ -151,7 +149,7 @@ class SPINN2D(nn.Module):
         self.layer1 = Shift2D(pde.nodes(), pde.fixed_nodes(),
                               fixed_h=fixed_h)
         n = self.layer1.n
-        self.layer2 = nn.Linear(n, n_outputs, bias=not use_pu)
+        self.layer2 = nn.Linear(n, pde.n_vars(), bias=not use_pu)
         self.layer2.weight.data.fill_(0.0)
         if not self.use_pu:
             self.layer2.bias.data.fill_(0.0)
@@ -179,7 +177,7 @@ class SPINN2D(nn.Module):
 
 
 def gaussian(x, y):
-    return torch.exp(-(x*x + y*y))
+    return torch.exp(-0.5*(x*x + y*y))
 
 
 class SoftPlus:
