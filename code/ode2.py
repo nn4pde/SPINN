@@ -9,9 +9,9 @@ from ode_base import BasicODE
 
 
 class Neumann1D(BasicODE):
-    def __init__(self, n, ns):
-        super().__init__(n, ns)
-        self.xb.requires_grad = True
+    # def __init__(self, n, ns):
+    #     super().__init__(n, ns)
+    #     self.xb.requires_grad = True
 
     def eval_bc(self, problem):
         x = self.boundary()
@@ -36,6 +36,7 @@ class Neumann1D(BasicODE):
 
     def boundary_loss(self, nn):
         x = self.boundary()
+        x.requires_grad=True
         u = nn(x)
         du = ag.grad(
             outputs=u, inputs=x, grad_outputs=torch.ones_like(u),
@@ -45,7 +46,7 @@ class Neumann1D(BasicODE):
         dbc = (u - ub)[:1]
         nbc = (du[0] - ub)[1:]
         bc = torch.cat((dbc, nbc))
-        return 100*(bc**2).sum()
+        return 10*(bc**2).sum()
 
 
 if __name__ == '__main__':

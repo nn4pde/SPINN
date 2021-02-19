@@ -21,7 +21,7 @@ class ODESimple(BasicODE):
         u = nn(self.boundary())
         ub = tensor(self.exact(self.xbn))
         bc = u - ub
-        return 100*(bc**2).sum()
+        return (bc**2).sum()
 
 if __name__ == '__main__':
     app = App1D(

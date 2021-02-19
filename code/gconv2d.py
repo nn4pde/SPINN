@@ -52,7 +52,7 @@ class GConvNet(nn.Module):
         )
 
     def __init__(self, pde, activation,
-                 fixed_h=False, use_pu=True, max_nbrs=25):
+                 fixed_h=False, use_pu=False, max_nbrs=25):
         super().__init__()
         self.activation = activation
         self.use_pu = use_pu

@@ -143,7 +143,7 @@ class SPINN2D(nn.Module):
         )
 
     def __init__(self, pde, activation, n_outputs=1,
-                 fixed_h=False, use_pu=True):
+                 fixed_h=False, use_pu=False):
         super().__init__()
 
         self.activation = activation

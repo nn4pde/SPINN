@@ -71,4 +71,4 @@ class BasicODE(PDE):
         u = nn(xs)
         u, ux, uxx = self._compute_derivatives(u, xs)
         res = self.pde(xs, u, ux, uxx)
-        return (res**2).sum()
+        return (res**2).mean()

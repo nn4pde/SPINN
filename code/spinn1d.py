@@ -94,9 +94,9 @@ class Shift(nn.Module):
         self.center = nn.Parameter(tensor(points))
         self.fixed = tensor(fixed_points)
         if fixed_h:
-            self.h = nn.Parameter(torch.tensor(2.0*dx))
+            self.h = nn.Parameter(torch.tensor(dx))
         else:
-            self.h = nn.Parameter(2.0*dx*torch.ones(n))
+            self.h = nn.Parameter(dx*torch.ones(n))
 
     def centers(self):
         return torch.cat((self.center, self.fixed))
@@ -124,7 +124,7 @@ class SPINN1D(nn.Module):
             help='Use a partition of unity.'
         )
 
-    def __init__(self, pde, activation, fixed_h=False, use_pu=True):
+    def __init__(self, pde, activation, fixed_h=False, use_pu=False):
         super().__init__()
 
         self.fixed_h = fixed_h
