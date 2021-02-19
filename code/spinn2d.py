@@ -128,7 +128,7 @@ class SPINN2D(nn.Module):
     @classmethod
     def from_args(cls, pde, activation, args):
         return cls(pde, activation,
-                   fixed_h=args.fixed_h, use_pu=not args.no_pu)
+                   fixed_h=args.fixed_h, use_pu=args.pu)
 
     @classmethod
     def setup_argparse(cls, parser, **kw):
@@ -138,8 +138,8 @@ class SPINN2D(nn.Module):
             help='Use fixed width nodes.'
         )
         p.add_argument(
-            '--no-pu', dest='no_pu', action='store_true', default=False,
-            help='Do not use a partition of unity.'
+            '--pu', dest='pu', action='store_true', default=False,
+            help='Use a partition of unity.'
         )
 
     def __init__(self, pde, activation, n_outputs=1,

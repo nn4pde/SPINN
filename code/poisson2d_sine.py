@@ -11,6 +11,7 @@ from pde2d_base import RegularPDE
 
 PI = np.pi
 
+
 class Poisson2D(RegularPDE):
     def pde(self, x, y, u, ux, uy, uxx, uyy):
         f = 20*PI**2*torch.sin(2*PI*x)*torch.sin(4*PI*y)
@@ -30,6 +31,7 @@ class Poisson2D(RegularPDE):
         ub = tensor(self.exact(xbn, ybn))
         bc = u - ub
         return (bc**2).sum()
+
 
 if __name__ == '__main__':
     app = App2D(
