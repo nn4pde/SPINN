@@ -38,7 +38,7 @@ class RegularPDE(PDE):
             help='Number of boundary samples to use per edge.'
         )
         p.add_argument(
-            '--sample-frac', dest='sample_frac',
+            '--sample-frac', '-f', dest='sample_frac',
             default=kw.get('sample_frac', 1.0), type=float,
             help='Fraction of interior nodes used for sampling.'
         )

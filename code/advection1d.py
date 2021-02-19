@@ -55,7 +55,7 @@ class Advection1D(IBVP2D):
         elif self.ic == 'sin2':
             z = (x - a*t + 0.5)
             y = np.heaviside(z, 0.5) - np.heaviside(z - 0.5, 0.5)
-            return np.sin(z*np.pi*4*y)
+            return y*np.sin(z*np.pi*4)
 
     def boundary_loss(self, nn):
         xb, tb =self.boundary()
