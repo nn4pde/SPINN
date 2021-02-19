@@ -11,7 +11,8 @@ class RegularPDE(PDE):
     @classmethod
     def from_args(cls, args):
         return cls(args.nodes, args.samples,
-                   args.b_nodes, args.b_samples)
+                   args.b_nodes, args.b_samples,
+                   args.sample_frac)
 
     @classmethod
     def setup_argparse(cls, parser, **kw):
@@ -36,6 +37,11 @@ class RegularPDE(PDE):
             default=kw.get('b_samples', None), type=int,
             help='Number of boundary samples to use per edge.'
         )
+        p.add_argument(
+            '--sample-frac', dest='sample_frac',
+            default=kw.get('sample_frac', 1.0), type=float,
+            help='Fraction of interior nodes used for sampling.'
+        )
 
     def _compute_derivatives(self, u, xs, ys):
         du = ag.grad(
@@ -55,7 +61,9 @@ class RegularPDE(PDE):
 
         return u, du[0], du[1], d2ux[0],  d2uy[1]
 
-    def __init__(self, n_nodes, ns, nb=None, nbs=None):
+    def __init__(self, n_nodes, ns, nb=None, nbs=None, sample_frac=1.0):
+        self.sample_frac = sample_frac
+
         # Interior nodes
         n = round(np.sqrt(n_nodes) + 0.49)
         self.n = n
@@ -84,6 +92,10 @@ class RegularPDE(PDE):
                   for t in np.mgrid[sl, sl])
         self.p_samples = (xs, ys)
 
+        self.n_interior = len(self.p_samples[0])
+        self.rng_interior = np.arange(self.n_interior)
+        self.sample_size = int(self.sample_frac*self.n_interior)
+
         # Boundary samples
         nbs = ns if nbs is None else nbs
         self.nbs = nbs
@@ -101,7 +113,13 @@ class RegularPDE(PDE):
         return self.f_nodes
 
     def interior(self):
-        return self.p_samples
+        if abs(self.sample_frac - 1.0) < 1e-3:
+            return self.p_samples
+        else:
+            idx = np.random.choice(self.rng_interior, 
+                size=self.sample_size, replace=False)
+            x, y = self.p_samples
+            return x[idx], y[idx]
 
     def boundary(self):
         return self.b_samples
@@ -111,9 +129,13 @@ class RegularPDE(PDE):
         x, y = np.mgrid[0:1:n*1j, 0:1:n*1j]
         return x, y
 
-    def interior_loss(self, nn):
+    def _get_residue(self, nn):
         xs, ys = self.interior()
         u = nn(xs, ys)
         u, ux, uy, uxx, uyy = self._compute_derivatives(u, xs, ys)
         res = self.pde(xs, ys, u, ux, uy, uxx, uyy)
+        return res
+
+    def interior_loss(self, nn):
+        res = self._get_residue(nn)
         return (res**2).mean()

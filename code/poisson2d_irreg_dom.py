@@ -10,7 +10,9 @@ from spinn2d import Plotter2D, App2D, SPINN2D
 class Poisson2D(PDE):
     @classmethod
     def from_args(cls, args):
-        return cls(args.f_nodes_int, args.f_nodes_bdy, args.f_samples_int, args.f_samples_bdy)
+        return cls(args.f_nodes_int, args.f_nodes_bdy, 
+            args.f_samples_int, args.f_samples_bdy,
+            args.sample_frac)
 
     @classmethod
     def setup_argparse(cls, parser, **kw):
@@ -34,6 +36,11 @@ class Poisson2D(PDE):
             '--f_samples_bdy', '-sb', dest='f_samples_bdy',
             default=kw.get('f_samples_bdy', 'mesh_data/boundary_samples.dat'), type=str,
             help='File containing boundary samples.'
+        )
+        p.add_argument(
+            '--sample-frac', dest='sample_frac',
+            default=kw.get('sample_frac', 1.0), type=float,
+            help='Fraction of interior nodes used for sampling.'
         )
 
     def _compute_derivatives(self, u, xs, ys):
@@ -73,13 +80,16 @@ class Poisson2D(PDE):
 
     def __init__(self,
         f_nodes_int, f_nodes_bdy,
-        f_samples_int, f_samples_bdy):
+        f_samples_int, f_samples_bdy,
+        sample_frac=1.0):
 
         self.f_nodes_int = f_nodes_int
         self.f_nodes_bdy = f_nodes_bdy
 
         self.f_samples_int = f_samples_int
         self.f_samples_bdy = f_samples_bdy
+
+        self.sample_frac = sample_frac
 
         # Interior nodes: Free
         xi, yi = self._extract_coordinates(f_nodes_int)
@@ -94,6 +104,10 @@ class Poisson2D(PDE):
         self.interior_samples = (tensor(xi, requires_grad=True),
                                  tensor(yi, requires_grad=True))
 
+        self.n_interior = len(xi)
+        self.rng_interior = np.arange(self.n_interior)
+        self.sample_size = int(self.sample_frac*self.n_interior)
+
         ## Boundary samples
         xb, yb = self._extract_coordinates(f_samples_bdy)
         self.boundary_samples = (tensor(xb, requires_grad=True),
@@ -106,7 +120,13 @@ class Poisson2D(PDE):
         return self.boundary_nodes
 
     def interior(self):
-        return self.interior_samples
+        if abs(self.sample_frac - 1.0) < 1e-3:
+            return self.interior_samples
+        else:
+            idx = np.random.choice(self.rng_interior, 
+                size=self.sample_size, replace=False)
+            x, y = self.interior_samples
+            return x[idx], y[idx]
 
     def boundary(self):
         return self.boundary_samples
@@ -121,11 +141,15 @@ class Poisson2D(PDE):
     def has_exact(self):
         return False
 
-    def interior_loss(self, nn):
+    def _get_residue(self, nn):
         xs, ys = self.interior()
         u = nn(xs, ys)
         u, ux, uy, uxx, uyy = self._compute_derivatives(u, xs, ys)
         res = self.pde(xs, ys, u, ux, uy, uxx, uyy)
+        return res
+
+    def interior_loss(self, nn):
+        res = self._get_residue(nn)
         return (res**2).mean()
 
     def boundary_loss(self, nn):

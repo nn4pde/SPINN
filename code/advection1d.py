@@ -13,7 +13,7 @@ class Advection1D(IBVP2D):
         return cls(args.nodes, args.samples,
                    args.b_nodes, args.b_samples,
                    args.xL, args.xR, args.T,
-                   args.ic)
+                   args.ic, args.sample_frac)
 
     @classmethod
     def setup_argparse(cls, parser, **kw):
@@ -28,9 +28,9 @@ class Advection1D(IBVP2D):
     def __init__(self, n, ns, 
         nb=None, nbs=None, 
         xL=0.0, xR=1.0, T=10, 
-        ic='gaussian'):
+        ic='gaussian', sample_frac=1.0):
 
-        super().__init__(n, ns, nb, nbs, xL, xR, T)
+        super().__init__(n, ns, nb, nbs, xL, xR, T, sample_frac)
         self.ic = ic
 
     def pde(self, x, t, u, ux, ut, uxx, utt):
@@ -47,7 +47,7 @@ class Advection1D(IBVP2D):
             return np.heaviside(z, 0.5) - np.heaviside(z - 0.5, 0.5)
         elif self.ic == 'gaussian':
             z = (x - a*t + 0.3)/0.15
-            return np.exp(-z**2)
+            return np.exp(-0.5*z**2)
         elif self.ic == 'sin':
             z = (x - a*t + 0.5)
             y = np.heaviside(z, 0.5) - np.heaviside(z - 0.5, 0.5)

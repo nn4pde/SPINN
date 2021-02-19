@@ -6,7 +6,9 @@ from spinn2d import Plotter2D, App2D, SPINN2D
 
 
 class SquareSlit(RegularPDE):
-    def __init__(self, n_nodes, ns, nb=None, nbs=None):
+    def __init__(self, n_nodes, ns, nb=None, nbs=None, sample_frac=1.0):
+        self.sample_frac = sample_frac
+
         # Interior nodes
         n = round(np.sqrt(n_nodes) + 0.49)
         self.n = n
@@ -38,6 +40,10 @@ class SquareSlit(RegularPDE):
         xs, ys = (tensor(t.ravel(), requires_grad=True)
                   for t in (x[cond], y[cond]))
         self.p_samples = (xs, ys)
+
+        self.n_interior = len(self.p_samples[0])
+        self.rng_interior = np.arange(self.n_interior)
+        self.sample_size = int(self.sample_frac*self.n_interior)
 
         # Boundary samples
         nbs = ns if nbs is None else nbs

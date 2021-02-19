@@ -14,7 +14,8 @@ class IBVP2D(PDE):
     def from_args(cls, args):
         return cls(args.nodes, args.samples,
                    args.b_nodes, args.b_samples,
-                   args.xL, args.xR, args.T)
+                   args.xL, args.xR, args.T,
+                   args.sample_frac)
 
     @classmethod
     def setup_argparse(cls, parser, **kw):
@@ -53,6 +54,11 @@ class IBVP2D(PDE):
             '--duration', dest='T',
             default=kw.get('T', 1.0), type=float,
             help='Duration of simulation.'
+        )
+        p.add_argument(
+            '--sample-frac', dest='sample_frac',
+            default=kw.get('sample_frac', 1.0), type=float,
+            help='Fraction of interior nodes used for sampling.'
         )
 
     def _compute_derivatives(self, u, xs, ts):
@@ -114,11 +120,14 @@ class IBVP2D(PDE):
 
     def __init__(self, n_nodes, ns, 
         nb=None, nbs=None,
-        xL=0.0, xR=1.0, T=1.0):
+        xL=0.0, xR=1.0, T=1.0,
+        sample_frac=1.0):
 
         self.xL = xL
         self.xR = xR
         self.T  = T
+
+        self.sample_frac = sample_frac
 
         # Interior nodes
         self.nx, self.nt = self._get_points_split((xR - xL), T, n_nodes)
@@ -140,6 +149,10 @@ class IBVP2D(PDE):
         self.p_samples = (tensor(xi, requires_grad=True), 
                           tensor(ti, requires_grad=True))
 
+        self.n_interior = len(self.p_samples[0])
+        self.rng_interior = np.arange(self.n_interior)
+        self.sample_size = int(self.sample_frac*self.n_interior)
+
         # Boundary samples
         if nbs is None:
             nbsx, nbst = self.nsx, self.nst
@@ -157,7 +170,13 @@ class IBVP2D(PDE):
         return self.f_nodes
 
     def interior(self):
-        return self.p_samples
+        if abs(self.sample_frac - 1.0) < 1e-3:
+            return self.p_samples
+        else:
+            idx = np.random.choice(self.rng_interior, 
+                size=self.sample_size, replace=False)
+            x, y = self.p_samples
+            return x[idx], y[idx]
 
     def boundary(self):
         return self.b_samples
@@ -167,9 +186,13 @@ class IBVP2D(PDE):
                         0.0:self.T:self.nst*1j]
         return x, t
 
-    def interior_loss(self, nn):
+    def _get_residue(self, nn):
         xs, ts = self.interior()
         u = nn(xs, ts)
         u, ux, ut, uxx, utt = self._compute_derivatives(u, xs, ts)
         res = self.pde(xs, ts, u, ux, ut, uxx, utt)
+        return res
+
+    def interior_loss(self, nn):
+        res = self._get_residue(nn)
         return (res**2).mean()

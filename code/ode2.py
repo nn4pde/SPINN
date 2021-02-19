@@ -9,17 +9,8 @@ from ode_base import BasicODE
 
 
 class Neumann1D(BasicODE):
-    def eval_bc(self, problem):
-        x = self.boundary()
-        u = problem.nn(x)
-        du = ag.grad(
-            outputs=u, inputs=x, grad_outputs=torch.ones_like(u),
-            retain_graph=True
-        )
-        ub = tensor([0.0, 0.5])
-        dbc = (u - ub)[:1]
-        nbc = (du[0] - ub)[1:]
-        return torch.cat((dbc, nbc))
+    def fixed_nodes(self):
+        return np.array([0.0])
 
     def pde(self, x, u, ux, uxx):
         return uxx + np.pi*np.pi*u - np.pi*torch.sin(np.pi*x)
@@ -29,6 +20,10 @@ class Neumann1D(BasicODE):
 
     def exact(self, x):
         return -0.5*x*np.cos(np.pi*x)
+
+    def interior_loss(self, nn):
+        res = self._get_residue(nn)
+        return (res**2).sum()
 
     def boundary_loss(self, nn):
         x = self.boundary()
@@ -42,7 +37,7 @@ class Neumann1D(BasicODE):
         dbc = (u - ub)[:1]
         nbc = (du[0] - ub)[1:]
         bc = torch.cat((dbc, nbc))
-        return 10*(bc**2).sum()
+        return (bc**2).sum()
 
 
 if __name__ == '__main__':
