@@ -18,8 +18,8 @@ class Plotter2D(Plotter):
 
         un = self.pde.exact(xn, yn)
         diff = un - pn
-        err_L1 = np.sum(np.abs(diff))
-        err_L2 = np.sum(diff**2)
+        err_L1 = np.mean(np.abs(diff))
+        err_L2 = np.sqrt(np.mean(diff**2))
         err_Linf = max(np.abs(diff))
         return err_L1, err_L2, err_Linf
 

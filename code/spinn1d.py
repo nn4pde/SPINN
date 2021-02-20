@@ -18,8 +18,8 @@ class Plotter1D(Plotter):
 
         yn = self.pde.exact(xn)
         diff = yn - pn
-        err_L1 = np.sum(np.abs(diff))
-        err_L2 = np.sum(diff**2)
+        err_L1 = np.mean(np.abs(diff))
+        err_L2 = np.sqrt(np.mean(diff**2))
         err_Linf = max(np.abs(diff))
         return err_L1, err_L2, err_Linf
 
@@ -93,7 +93,7 @@ class Shift(nn.Module):
             xmax = max(np.max(points), np.max(fixed_points))
         else:
             xmin, xmax = np.min(points), np.max(points)
-        dx = (xmax - xmin)/n
+        dx = 0.5*(xmax - xmin)/n
         self.center = nn.Parameter(tensor(points))
         self.fixed = tensor(fixed_points)
         if fixed_h:

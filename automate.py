@@ -10,7 +10,7 @@ import matplotlib
 matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 
-fontsize=24
+fontsize=32
 font = {'size': fontsize}
 matplotlib.rc('font', **font)
 
@@ -83,7 +83,7 @@ class ODE2(Problem):
             Simulation(
                 root=self.input_path('n_%d' % i),
                 base_command=base_cmd,
-                nodes=i, samples=40*i,
+                nodes=i, samples=20*i,
                 sample_frac=0.1,
                 n_train=20000,
                 lr=5e-3,
@@ -217,14 +217,11 @@ def _plot_ode_conv(problem, n_nodes):
 
 class ODE3Conv1(Problem):
     def get_name(self):
-        return f'ode3_conv_1'
+        return 'ode3_conv_1'
 
     def setup(self):
-        self.n = 1
-        self.ns = 20
-
         base_cmd = (
-            'python3 code/ode3.py -d $output_dir'
+            'python3 code/ode2.py -d $output_dir'
         )
         self.cases = [
             Simulation(
@@ -245,7 +242,7 @@ class ODE3Conv1(Problem):
 
 class ODE3Conv3(Problem):
     def get_name(self):
-        return f'ode3_conv_3'
+        return 'ode3_conv_3'
 
     def setup(self):
         self.n = 3
@@ -270,9 +267,10 @@ class ODE3Conv3(Problem):
     def run(self):
         _plot_ode_conv(self, self.n)
 
+
 if __name__ == '__main__':
     PROBLEMS = [
-        ODE1, ODE2, ODE3, 
+        ODE1, ODE2, ODE3,
         ODE3Conv1, ODE3Conv3
     ]
     automator = Automator(
