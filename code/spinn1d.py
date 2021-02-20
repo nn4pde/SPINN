@@ -11,14 +11,17 @@ from common import Plotter, App, tensor
 class Plotter1D(Plotter):
     def get_error(self, xn=None, pn=None):
         if not self.pde.has_exact():
-            return 0.0
+            return 0.0, 0.0, 0.0
 
         if xn is None and pn is None:
             xn, pn = self.get_plot_data()
+
         yn = self.pde.exact(xn)
-        umax = max(np.abs(yn))
-        diff = np.abs(yn - pn)
-        return diff.mean()/umax
+        diff = yn - pn
+        err_L1 = np.sum(np.abs(diff))
+        err_L2 = np.sum(diff**2)
+        err_Linf = max(np.abs(diff))
+        return err_L1, err_L2, err_Linf
 
     def save(self, dirname):
         '''Save the model and results.

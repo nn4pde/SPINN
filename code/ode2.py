@@ -37,7 +37,12 @@ class Neumann1D(BasicODE):
         dbc = (u - ub)[:1]
         nbc = (du[0] - ub)[1:]
         bc = torch.cat((dbc, nbc))
-        return (bc**2).sum()
+        return 50*(bc**2).sum()
+
+    def plot_points(self):
+        n = 25
+        x = np.linspace(0.0, 1.0, n)
+        return x
 
 
 if __name__ == '__main__':

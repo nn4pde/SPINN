@@ -23,6 +23,11 @@ class ODESimple(BasicODE):
         bc = u - ub
         return (bc**2).sum()
 
+    def plot_points(self):
+        n = 25
+        x = np.linspace(0.0, 1.0, n)
+        return x
+
 if __name__ == '__main__':
     app = App1D(
         pde_cls=ODESimple, nn_cls=SPINN1D,

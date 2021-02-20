@@ -158,8 +158,8 @@ class Optimizer:
         o = optimizers[args.optimizer]
         return cls(
             pde, nn, plotter, n_train=args.n_train,
-            n_skip=args.n_skip, lr=args.lr, plot=args.plot,
-            out_dir=args.directory, opt_class=o
+            n_skip=args.n_skip, tol=args.tol, lr=args.lr,
+            plot=args.plot, out_dir=args.directory, opt_class=o
         )
 
     @classmethod
@@ -174,6 +174,11 @@ class Optimizer:
             '--n-skip', dest='n_skip',
             default=kw.get('n_skip', 100), type=int,
             help='Number of iterations after which we print/update plots.'
+        )
+        p.add_argument(
+            '--tol', '-e', dest='tol',
+            default=kw.get('tol', 1e-6), type=float,
+            help='Tolerance for loss computation.'
         )
         p.add_argument(
             '--plot', dest='plot', action='store_true', default=False,
@@ -194,8 +199,8 @@ class Optimizer:
             help='Output directory (output files are dumped here).'
         )
 
-    def __init__(self, pde, nn, plotter, n_train, n_skip=100, lr=1e-2,
-                 plot=True, out_dir=None, opt_class=optim.Adam):
+    def __init__(self, pde, nn, plotter, n_train, n_skip=100, tol=1e-6, 
+                 lr=1e-2, plot=True, out_dir=None, opt_class=optim.Adam):
         '''Initializer
 
         Parameters
@@ -217,11 +222,14 @@ class Optimizer:
         self.plotter = plotter
 
         self.opt_class = opt_class
-        self.errors = []
+        self.errors_L1 = []
+        self.errors_L2 = []
+        self.errors_Linf = []
         self.loss = []
         self.time_taken = 0.0
         self.n_train = n_train
         self.n_skip = n_skip
+        self.tol = tol
         self.lr = lr
         self.plot = plot
         self.out_dir = out_dir
@@ -243,24 +251,33 @@ class Optimizer:
         if self.plot:
             plotter.plot()
 
+        iterations_done = False
         start = time.perf_counter()
         for i in range(1, n_train+1):
             loss = opt.step(self.closure)
-            if i % n_skip == 0 or i == n_train:
-                err = 0.0
+            if loss.item() < self.tol:
+                iterations_done = True
+            if i % n_skip == 0 or i == n_train or iterations_done:
+                err_L1 = 0.0
+                err_L2 = 0.0
+                err_Linf = 0.0
                 if self.plot:
-                    err = plotter.plot()
+                    err_L1, err_L2, err_Linf = plotter.plot()
                 else:
-                    err = plotter.get_error()
-                self.errors.append(err)
+                    err_L1, err_L2, err_Linf = plotter.get_error()
+                self.errors_L1.append(err_L1)
+                self.errors_L2.append(err_L2)
+                self.errors_Linf.append(err_Linf)
                 if self.pde.has_exact():
-                    e_str = f", error={err:.3e}"
+                    e_str = f", L2 error={err_L2:.3e}"
                 else:
                     e_str = ''
                 print(
                     f"Iteration ({i}/{n_train}): Loss={loss.item():.3e}" +
                     e_str
                 )
+            if iterations_done:
+                break
         time_taken = time.perf_counter() - start
         self.time_taken = time_taken
         print(f"Done. Took {time_taken:.3f} seconds.")
@@ -277,7 +294,8 @@ class Optimizer:
         print("Saving output to", dirname)
         fname = os.path.join(dirname, 'solver.npz')
         np.savez(
-            fname, loss=self.loss, error=self.errors,
+            fname, loss=self.loss, error_L1=self.errors_L1, 
+            error_L2=self.errors_L2, error_Linf=self.errors_Linf,
             time_taken=self.time_taken
         )
         self.plotter.save(dirname)
