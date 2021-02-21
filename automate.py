@@ -603,13 +603,96 @@ class Poisson2DSineNodes(Problem):
     def run(self):
         _plot_pde_conv_nodes(self)
 
+
+def _plot_pde_conv_nodes_fem(problem):
+    problem.make_output_dir()
+
+    L1s = []
+    L2s = []
+    Linfs = []
+
+    n_nodes = []
+    for case in problem.cases:
+        n_nodes.append(case.params['nodes'])
+
+    for case in problem.cases:
+        ## Collect errors
+        res = np.load(case.input_path('results.npz'))
+        L1s.append(res['L1'].item())
+        L2s.append(res['L2'].item())
+        Linfs.append(res['Linf'].item())
+
+    ## Plot L1 error as function of iteration
+    plt.figure(figsize=(12,12))
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.plot(n_nodes, L1s, 'b-',linewidth=6) 
+    plt.xlabel('Number of nodes')
+    plt.ylabel(r'$L_1$ error')
+    plt.tight_layout()
+    plt.savefig(problem.output_path(f'square_slit_L1_error.pdf'))
+    plt.close()
+
+    ## Plot L2 error as function of iteration
+    plt.figure(figsize=(12,12))
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.plot(n_nodes, L2s, 'b-',linewidth=6) 
+    plt.xlabel('Number of nodes')
+    plt.ylabel(r'$L_2$ error')
+    plt.tight_layout()
+    plt.savefig(problem.output_path(f'square_slit_L2_error.pdf'))
+    plt.close()
+
+    ## Plot Linf error as function of iteration
+    plt.figure(figsize=(12,12))
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.plot(n_nodes, Linfs, 'b-',linewidth=6) 
+    plt.xlabel('Number of nodes')
+    plt.ylabel(r'$L_{\infty}$ error')
+    plt.tight_layout()
+    plt.savefig(problem.output_path(f'square_slit_Linf_error.pdf'))
+    plt.close()
+
+class SquareSlit(Problem):
+    def get_name(self):
+        return 'square_slit'
+
+    def setup(self):
+        base_cmd = (
+            'python3 code/poisson2d_square_slit.py -d $output_dir'
+        )
+        self.cases = [
+            Simulation(
+                root=self.input_path(f'n_{n}'),
+                base_command=base_cmd,
+                nodes=n, samples=3*n,
+                n_train=10000, n_skip=100,
+                lr=1e-3,
+                tol=1e-4,
+                activation='softplus',
+                gpu=None
+            )
+            for n in (25, 50, 100, 200, 500)
+        ]
+
+    def run(self):
+        _plot_pde_conv_nodes_fem(self)
+
+
+## Irregular domain
+## python poisson2d_irreg_dom.py --plot --lr 1e-3 --gpu
+
+
 if __name__ == '__main__':
     PROBLEMS = [
         ODE1, ODE2, ODE3,
         ODE3Conv1, ODE3Conv3,
         ODE2Conv6,
         Poisson2DSineConv,
-        Poisson2DSineNodes
+        Poisson2DSineNodes,
+        SquareSlit
     ]
     automator = Automator(
         simulation_dir='outputs',

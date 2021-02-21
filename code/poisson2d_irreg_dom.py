@@ -159,6 +159,30 @@ class Poisson2D(PDE):
         bc = u - ub
         return (bc**2).sum()
 
+
+def _vtu2data(fname):
+    src = mlab.pipeline.open(fname, figure=False)
+    ug = src.reader.output
+    pts = ug.points.to_array()
+    scalar = ug.point_data.scalars.to_array()
+    return pts, scalar
+
+def _get_errors(nn, fvtu):
+    pts, u_exact = _vtu2data(fvtu)
+    x = pts[:,0]
+    y = pts[:,1]
+    xt, yt = tensor(x.ravel()), tensor(y.ravel())
+    u = nn(xt, yt).detach().cpu().numpy()
+    u.shape = x.shape
+
+    du = u - u_exact
+    L1 = np.mean(np.abs(du))
+    L2 = np.sqrt(np.mean(du**2))
+    Linf = np.max(np.abs(du))
+
+    return L1, L2, Linf
+
+
 class PointCloud(Plotter2D):
     def get_plot_data(self):
         x, y = self.pde.plot_points()
@@ -170,13 +194,13 @@ class PointCloud(Plotter2D):
 
     def plot_solution(self):
         xn, yn, pn = self.get_plot_data()
-        pde = self.pde
         if self.plt1 is None:
-            mlab.figure(size=(700, 700))
+            mlab.figure(size=(700, 700), fgcolor=(0,0,0), bgcolor=(1,1,1))
             self.plt1 = mlab.points3d(xn, yn, pn, pn)
         else:
             self.plt1.mlab_source.scalars = pn
         return self.get_error(xn, yn, pn)
+
 
 if __name__ == '__main__':
     app = App2D(
@@ -185,3 +209,18 @@ if __name__ == '__main__':
         plotter_cls=PointCloud
     )
     app.run(lr=1e-3)
+
+    fvtu = 'fem/poisson_irregular000000.vtu'
+    L1, L2, Linf = _get_errors(app.nn, fvtu)
+
+    print("L1 error = ", L1)
+    print("L2 error = ", L2)
+    print("Linf error = ", Linf)
+
+    mlab.figure(size=(700, 700), fgcolor=(0,0,0), bgcolor=(1,1,1))
+    pts, u_fem = _vtu2data(fvtu)
+    src = mlab.pipeline.open(fvtu)
+    s = mlab.pipeline.surface(src)
+    mlab.colorbar(s)
+    mlab.show()
+

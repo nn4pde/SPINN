@@ -1,8 +1,12 @@
 import numpy as np
+import torch
+import os
 
 from common import tensor
 from pde2d_base import RegularPDE
 from spinn2d import Plotter2D, App2D, SPINN2D
+
+from mayavi import mlab
 
 
 class SquareSlit(RegularPDE):
@@ -77,9 +81,67 @@ class SquareSlit(RegularPDE):
         return (bc**2).sum()
 
 
+def _vtu2data(fname):
+    src = mlab.pipeline.open(fname, figure=False)
+    ug = src.reader.output
+    pts = ug.points.to_array()
+    scalar = ug.point_data.scalars.to_array()
+    return pts, scalar
+
+def _get_errors(nn, fvtu):
+    pts, u_exact = _vtu2data(fvtu)
+    x = pts[:,0]
+    y = pts[:,1]
+    xt, yt = tensor(x.ravel()), tensor(y.ravel())
+    u = nn(xt, yt).detach().cpu().numpy()
+    u.shape = x.shape
+
+    du = u - u_exact
+    L1 = np.mean(np.abs(du))
+    L2 = np.sqrt(np.mean(du**2))
+    Linf = np.max(np.abs(du))
+
+    return L1, L2, Linf
+
+
+class FEM(Plotter2D):
+    def save(self, dirname):
+        '''Save the model and results.
+
+        '''
+        fvtu = 'code/fem/poisson_solution000000.vtu'
+
+        modelfname = os.path.join(dirname, 'model.pt')
+        torch.save(self.nn.state_dict(), modelfname)
+
+        rfile = os.path.join(dirname, 'results.npz')
+        pts, u_exact = _vtu2data(fvtu)
+        x = pts[:,0]
+        y = pts[:,1]
+        xt, yt = tensor(x.ravel()), tensor(y.ravel())
+        u = self.nn(xt, yt).detach().cpu().numpy()
+        u.shape = x.shape
+
+        du = u - u_exact
+        L1 = np.mean(np.abs(du))
+        L2 = np.sqrt(np.mean(du**2))
+        Linf = np.max(np.abs(du))
+
+        np.savez(rfile, x=x, y=y, u=u, u_exact=u_exact,
+                 L1=L1, L2=L2, Linf=Linf)
+
+
 if __name__ == '__main__':
     app = App2D(
-        pde_cls=SquareSlit, nn_cls=SPINN2D,
-        plotter_cls=Plotter2D
+        pde_cls=SquareSlit, 
+        nn_cls=SPINN2D,
+        plotter_cls=FEM
     )
     app.run(nodes=50, samples=200, lr=1e-2)
+
+    # fvtu = 'fem/poisson_solution000000.vtu'
+    # L1, L2, Linf = _get_errors(app.nn, fvtu)
+
+    # print("L1 error = ", L1)
+    # print("L2 error = ", L2)
+    # print("Linf error = ", Linf)
