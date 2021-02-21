@@ -27,7 +27,7 @@ class ODESimple(BasicODE):
         u = nn(self.boundary())
         ub = tensor(self.exact(self.xbn))
         bc = u - ub
-        return 10*(bc**2).sum()
+        return 100*(bc**2).sum()
 
     def plot_points(self):
         n = 50

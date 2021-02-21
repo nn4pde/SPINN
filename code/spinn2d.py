@@ -20,7 +20,7 @@ class Plotter2D(Plotter):
         diff = un - pn
         err_L1 = np.mean(np.abs(diff))
         err_L2 = np.sqrt(np.mean(diff**2))
-        err_Linf = max(np.abs(diff))
+        err_Linf = np.max(np.abs(diff))
         return err_L1, err_L2, err_Linf
 
     def save(self, dirname):
@@ -193,7 +193,7 @@ class SoftPlus:
     def __call__(self, x, y):
         sp = self._sp
         return sp(
-            self.k - sp(x) - sp(-x) - sp(y) - sp(-y)
+            self.k - sp(2.0*x) - sp(-2.0*x) - sp(2.0*y) - sp(-2.0*y)
         )/self.fac
 
 

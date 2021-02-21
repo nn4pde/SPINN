@@ -20,7 +20,7 @@ class Plotter1D(Plotter):
         diff = yn - pn
         err_L1 = np.mean(np.abs(diff))
         err_L2 = np.sqrt(np.mean(diff**2))
-        err_Linf = max(np.abs(diff))
+        err_Linf = np.max(np.abs(diff))
         return err_L1, err_L2, err_Linf
 
     def save(self, dirname):
@@ -93,7 +93,7 @@ class Shift(nn.Module):
             xmax = max(np.max(points), np.max(fixed_points))
         else:
             xmin, xmax = np.min(points), np.max(points)
-        dx = 0.5*(xmax - xmin)/n
+        dx = (xmax - xmin)/n
         self.center = nn.Parameter(tensor(points))
         self.fixed = tensor(fixed_points)
         if fixed_h:
@@ -182,7 +182,7 @@ class SoftPlus:
 
     def __call__(self, x):
         sp = self._sp
-        return sp(self.k - sp(x) - sp(-x))/self.fac
+        return sp(self.k - sp(2.0*x) - sp(-2.0*x))/self.fac
 
 
 tanh = torch.tanh
