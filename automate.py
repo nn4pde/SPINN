@@ -693,6 +693,96 @@ class SquareSlit(Problem):
 # python poisson2d_irreg_dom.py --plot --lr 1e-3 --gpu
 
 
+class Advection(Problem):
+    def get_name(self):
+        return 'advection'
+
+    def _n_nodes(self, nn_state):
+        return len(nn_state['layer1.x'])
+
+    def setup(self):
+        base_cmd = (
+            'python3 code/advection1d.py -d $output_dir '
+        )
+
+        self.cases = [
+            Simulation(
+                root=self.input_path(f'{activation}_n{i}'),
+                base_command=base_cmd,
+                nodes=i, samples=800,
+                n_train=5000,
+                lr=1e-3,
+                activation=activation,
+            )
+            for i in (10, 20, 40) for activation in ('softplus', 'gaussian',)
+        ]
+
+    def _plot_centers(self, case, nn_state):
+        x = nn_state['layer1.x']
+        y = nn_state['layer1.y']
+        w = nn_state['layer1.h']
+        figure()
+        a = plt.gca()
+        circles = [
+            plt.Circle((xi, yi), radius=wi, linewidth=1, fill=False,
+                       color='blue')
+            for xi, yi, wi in zip(x, y, w[:len(x)])
+        ]
+        c = matplotlib.collections.PatchCollection(
+            circles, match_original=True
+        )
+        a.add_collection(c)
+        plt.xlim(-1.5, 1.5)
+        plt.axis('equal')
+        plt.tight_layout()
+        plt.grid()
+        plt.xlabel('x')
+        plt.ylabel('y')
+        fname = self.output_path(
+            'centers_n_%s_%d.pdf' % (case.params['activation'], len(x))
+        )
+        plt.savefig(fname)
+        plt.close()
+
+    def _plot_solution(self, case, nodes):
+        res = np.load(case.input_path('results.npz'))
+        x, t = res['x'], res['t']
+        u, u_ex = res['u'], res['u_exact']
+        colors = ['black', 'blue', 'green']
+        figure()
+
+        for i in range(3):
+            plt.plot(
+                x[:, i], u_ex[:, i],
+                linewidth=4, color=colors[i],
+                label='Exact (t=%.1f)' % t[0, i]
+            )
+            label = 'SPINN' if i == 2 else None
+            plt.plot(
+                x[:, i], u[:, i], '--', color='red',
+                linewidth=4, label=label
+            )
+        plt.xlabel(r'$x$', fontsize=24)
+        plt.ylabel(r'$u(x)$', fontsize=24)
+        plt.legend(loc='upper left')
+        plt.grid()
+        plt.xlim(-1.0, 1.0)
+        plt.ylim(-0.25, 1.5)
+        fname = self.output_path(
+            'n_%s_%d.pdf' % (case.params['activation'], nodes)
+        )
+        plt.savefig(fname)
+        plt.close()
+
+    def run(self):
+        self.make_output_dir()
+        for case in self.cases:
+            nn_state = torch.load(case.input_path('model.pt'))
+            nodes = self._n_nodes(nn_state)
+            self._plot_solution(case, nodes)
+            self._plot_centers(case, nn_state)
+
+
 class Cavity(Problem):
     def get_name(self):
         return 'cavity'
@@ -783,6 +873,7 @@ if __name__ == '__main__':
         Poisson2DSineConv,
         Poisson2DSineNodes,
         SquareSlit,
+        Advection,
         Cavity
     ]
     automator = Automator(
