@@ -7,7 +7,7 @@ import numpy as np
 from common import tensor
 from spinn1d import Plotter1D, App1D
 from fourier1d_base import Fourier1D, FourierPlotter1D
-from ode1 import ODESimple
+from ode3 import ODESimple
 
 if __name__ == '__main__':
     app = App1D(
@@ -15,4 +15,4 @@ if __name__ == '__main__':
         nn_cls=Fourier1D,
         plotter_cls=FourierPlotter1D
     )
-    app.run(samples=15, modes=10, lr=1e-2)
+    app.run(modes=25, samples=100, lr=1e-3)
