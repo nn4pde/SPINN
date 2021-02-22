@@ -79,7 +79,10 @@ class MyPlotter(Plotter2D):
         u = nn(xt, tt).detach().cpu().numpy()
         u.shape = x.shape
         u_exact = self.pde.exact(x, t)
-        np.savez(rfile, x=x, t=t, u=u, u_exact=u_exact)
+        xp, tp, up = self.get_plot_data()
+        uex_p = self.pde.exact(xp, tp)
+        np.savez(rfile, x=x, t=t, u=u, u_exact=u_exact,
+                 xp=xp, tp=tp, up=up, uex_p=uex_p)
 
 
 if __name__ == '__main__':
