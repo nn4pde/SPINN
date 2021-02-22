@@ -36,4 +36,5 @@ if __name__ == '__main__':
         nn_cls=SPINN1D,
         plotter_cls=FDPlotter1D
     )
-    app.run()
+    app.run(nodes=20, samples=1000, sample_frac=0.25, dt=0.025,
+            tol=1e-4, lr=1e-4, n_train=5000)

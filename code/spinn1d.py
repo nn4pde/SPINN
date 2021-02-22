@@ -72,10 +72,16 @@ class Plotter1D(Plotter):
             self.plt3.set_data(x, w)
 
     def plot(self):
+        first = self.plt1 is None
         err = self.plot_solution()
         self.plot_weights()
-        plt.legend()
-        plt.pause(0.001)
+        if first:
+            plt.legend()
+            plt.pause(0.001)
+        else:
+            fig = plt.gcf()
+            fig.canvas.draw()
+            fig.canvas.flush_events()
         return err
 
     def show(self):
