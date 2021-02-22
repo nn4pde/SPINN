@@ -9,18 +9,20 @@ from spinn1d import Plotter1D
 
 
 class Scale1D(nn.Module):
+    def _get_weights(self, n_modes):
+        ws = np.zeros((1, self.n_modes))
+        for i in range(self.n_modes):
+            ws[0,i] = i + 1.0
+        ws = tensor(ws)
+        return ws
+
     def __init__(self, n_modes):
         super().__init__()
         self.n_modes = n_modes
+        self.ws = self._get_weights(n_modes)
 
     def forward(self, x):
-        ws = np.zeros((1, self.n_modes))
-        
-        for i in range(self.n_modes):
-            ws[0,i] = i + 1.0
-
-        ws = tensor(ws)
-        return x @ ws
+        return x @ self.ws
 
 
 ## Implementation of Fourier network
