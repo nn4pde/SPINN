@@ -75,7 +75,7 @@ class Plotter1D(Plotter):
         err = self.plot_solution()
         self.plot_weights()
         plt.legend()
-        plt.pause(0.01)
+        plt.pause(0.001)
         return err
 
     def show(self):

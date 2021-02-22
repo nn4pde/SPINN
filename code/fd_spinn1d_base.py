@@ -2,7 +2,7 @@
 
 import os
 import numpy as np
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 import torch
 
 from common import device
@@ -20,23 +20,37 @@ class FDPlotter1D(Plotter1D):
         if self.plt1 is None:
             lines, = plt.plot(xn, pn, '-', label='computed')
             self.plt1 = lines
+            self.title = plt.title('t = %.3e seconds' % pde.t)
             if self.show_exact and pde.has_exact():
                 yn = self.pde.exact(xn)
                 lexact, = plt.plot(xn, yn, label='exact')
                 self.lexact = lexact
             else:
-                yn = pn
+                yn = self.pde.u0.detach().cpu().numpy()
             plt.grid()
             plt.xlim(-0.1, 1.1)
             ymax, ymin = np.max(yn), np.min(yn)
-            delta = (ymax - ymin)*0.5
+            delta = (ymax - ymin)*0.2
             plt.ylim(ymin - delta, ymax + delta)
         else:
+            self.title.set_text('t = %.3e seconds' % pde.t)
             self.plt1.set_data(xn, pn)
             if self.show_exact and pde.has_exact():
                 yn = self.pde.exact(xn)
                 self.lexact.set_data(xn, yn)
         return self.get_error(xn, pn)
+
+    def save(self, dirname):
+        '''Save the model and results.
+
+        '''
+        iter = self.pde.iter
+        modelfname = os.path.join(dirname, 'model_%04d.pt' % iter)
+        torch.save(self.nn.state_dict(), modelfname)
+        rfile = os.path.join(dirname, 'results_%04d.npz' % iter)
+        x, y = self.get_plot_data()
+        y_exact = self.pde.exact(x)
+        np.savez(rfile, x=x, y=y, y_exact=y_exact)
 
 
 class FDSPINN1D(BasicODE):
@@ -69,15 +83,14 @@ class FDSPINN1D(BasicODE):
             help='Iterations'
         )
 
-    def __init__(self, n, ns, sample_frac=1.0, 
-                 dt=1e-3, T=1.0, t_skip=10):
+    def __init__(self, n, ns, sample_frac=1.0, dt=1e-3, T=1.0, t_skip=10):
         super().__init__(n, ns, sample_frac)
-
-        self.dt     = dt
-        self.t      = self.dt
-        self.T      = T
+        self.iter = 1
+        self.dt = dt
+        self.t = self.dt
+        self.T = T
         self.t_skip = t_skip
-        self.u0     = self.initial(self.xs)
+        self.u0 = self.initial(self.xs)
 
     def pde(self, x, u, ux, uxx, u0, dt):
         pass
@@ -112,27 +125,30 @@ class AppFD1D(App1D):
 
         solver = self.optimizer.from_args(pde, nn, plotter, args)
         self.solver = solver
+        self.iterate()
 
-        n_itr = int(self.pde.T/self.pde.dt)
+    def iterate(self):
+        n_itr = round(self.pde.T/self.pde.dt + 0.49)
+        out_dir = self.solver.out_dir
+
+        if out_dir is None:
+            print("No output directory set.  Not saving.")
+        else:
+            if not os.path.exists(out_dir):
+                os.makedirs(out_dir)
+                print("Saving output to", out_dir)
 
         for itr in range(n_itr):
             self.solver.solve()
             if itr > 0:
                 self.pde.t += self.pde.dt
-
+                self.pde.iter += 1
+                print("Current time: %f" % self.pde.t)
             with torch.no_grad():
                 self.pde.u0 = self.nn(self.pde.xs)
 
-            # if itr % self.pde.t_skip == 0:
-                # FIX!
-
-        dirname = self.solver.out_dir
-        if self.solver.out_dir is None:
-            print("No output directory set.  Skipping.")
-        else:
-            if not os.path.exists(dirname):
-                os.makedirs(dirname)
-            print("Saving output to", dirname)
-            self.plotter.save(dirname)
+            if itr % self.pde.t_skip == 0:
+                if out_dir is not None:
+                    self.plotter.save(out_dir)
 
         plt.show()

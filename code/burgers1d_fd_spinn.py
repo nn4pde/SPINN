@@ -1,6 +1,5 @@
 # Hybrid Finite Difference SPINN algorithm for the 1d Burgers equation
 
-import os
 import numpy as np
 import torch
 
