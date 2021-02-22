@@ -95,11 +95,24 @@ class FDSPINN1D(BasicODE):
     def pde(self, x, u, ux, uxx, u0, dt):
         pass
 
+    def sample_arrays(self, *args):
+        if abs(self.sample_frac - 1.0) < 1e-3:
+            return args
+        else:
+            idx = np.random.choice(
+                self.rng_interior,
+                size=self.sample_size, replace=False
+            )
+            return (arr[idx] for arr in args)
+
+    def interior(self):
+        return self.xs
+
     def interior_loss(self, nn):
-        xs = self.interior()
+        xs, u0 = self.sample_arrays(self.interior(), self.u0)
         u = nn(xs)
         u, ux, uxx = self._compute_derivatives(u, xs)
-        res = self.pde(xs, u, ux, uxx, self.u0, self.dt)
+        res = self.pde(xs, u, ux, uxx, u0, self.dt)
         return (res**2).mean()
 
 

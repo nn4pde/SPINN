@@ -13,7 +13,7 @@ class Burgers1D(FDSPINN1D):
         return u0
 
     def pde(self, x, u, ux, uxx, u0, dt):
-        return -dt*u*ux - u + self.u0
+        return -dt*u*ux - u + u0
 
     def has_exact(self):
         return False

@@ -16,7 +16,7 @@ class Heat1D(FDSPINN1D):
 
     def pde(self, x, u, ux, uxx, u0, dt):
         c = 1.0
-        return c*c*self.dt*uxx - u + self.u0
+        return c*c*self.dt*uxx - u + u0
 
     def has_exact(self):
         return True
