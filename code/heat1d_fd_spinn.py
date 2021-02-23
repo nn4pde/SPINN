@@ -45,4 +45,4 @@ if __name__ == '__main__':
         nn_cls=SPINN1D,
         plotter_cls=FDPlotter1D
     )
-    app.run()
+    app.run(nodes=10, dt=0.01, samples=100, tol=2e-5, T=0.1, lr=1e-3)
