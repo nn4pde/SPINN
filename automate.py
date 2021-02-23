@@ -302,7 +302,7 @@ class ODE3Conv3(Problem):
         _plot_ode_conv(self, self.n, 'ode3')
 
 
-def _plot_ode_conv_sampling(problem, n_nodes, 
+def _plot_ode_conv_sampling(problem, n_nodes, pname='ode',
                             left_bdy=True, right_bdy=True):
     problem.make_output_dir()
 
@@ -336,14 +336,21 @@ def _plot_ode_conv_sampling(problem, n_nodes,
         plt.grid()
 
         ## Plot nodal positions
-        cen = [0.0] + nn_state['layer1.center'].tolist() + [1.0]
+        cen = nn_state['layer1.center'].tolist()
+        if left_bdy:
+            cen = [0.0] + cen
+        if right_bdy:
+            cen = cen + [1.0]
+
         plt.plot(
             cen, np.zeros_like(cen),
             'bo', markersize=8, label='Nodes'
         )
 
         plt.tight_layout()
-        plt.savefig(problem.output_path(f"n_{n_nodes}_f_{case.params['sample_frac']}.pdf"))
+        plt.savefig(problem.output_path(
+            f"{pname}_n_{n_nodes}_f_{case.params['sample_frac']}.pdf"
+        ))
         plt.close()
 
         ## Save errors
@@ -364,7 +371,9 @@ def _plot_ode_conv_sampling(problem, n_nodes,
     plt.ylabel(r'$L_1$ error')
     plt.legend()
     plt.tight_layout()
-    plt.savefig(problem.output_path(f'L1_error_n_{n_nodes}_f.pdf'))
+    plt.savefig(problem.output_path(
+        f'{pname}_L1_error_n_{n_nodes}_f.pdf'
+    ))
     plt.close()
 
     ## Plot L2 error as function of iteration
@@ -379,7 +388,9 @@ def _plot_ode_conv_sampling(problem, n_nodes,
     plt.ylabel(r'$L_2$ error')
     plt.legend()
     plt.tight_layout()
-    plt.savefig(problem.output_path(f'L2_error_n_{n_nodes}_f.pdf'))
+    plt.savefig(problem.output_path(
+        f'{pname}_L2_error_n_{n_nodes}_f.pdf'
+    ))
     plt.close()
 
     ## Plot Linf error as function of iteration
@@ -394,7 +405,9 @@ def _plot_ode_conv_sampling(problem, n_nodes,
     plt.ylabel(r'$L_{\infty}$ error')
     plt.legend()
     plt.tight_layout()
-    plt.savefig(problem.output_path(f'Linf_error_n_{n_nodes}_f.pdf'))
+    plt.savefig(problem.output_path(
+        f'{pname}_Linf_error_n_{n_nodes}_f.pdf'
+    ))
     plt.close()
 
 
@@ -403,7 +416,7 @@ class ODE2Conv6(Problem):
         return 'ode2_conv_6'
 
     def setup(self):
-        self.n = 6
+        self.n = 5
         self.ns = 20*self.n
 
         base_cmd = (
@@ -415,8 +428,8 @@ class ODE2Conv6(Problem):
                 base_command=base_cmd,
                 nodes=self.n, samples=self.ns,
                 sample_frac=f,
-                n_train=20000, n_skip=1,
-                lr=5e-3,
+                n_train=50000, n_skip=1,
+                lr=2e-3,
                 tol=1e-3,
                 activation='gaussian'
             )
@@ -424,7 +437,7 @@ class ODE2Conv6(Problem):
         ]
 
     def run(self):
-        _plot_ode_conv_sampling(self, self.n)
+        _plot_ode_conv_sampling(self, self.n, 'ode2', right_bdy=False)
 
 
 def _plot_pde_conv(problem, n_nodes):
