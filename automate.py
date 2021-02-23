@@ -23,7 +23,7 @@ def figure():
     matplotlib.rc('font', **font)
 
 
-def _plot_1d(problem):
+def _plot_1d(problem, left_bdy=True, right_bdy=True):
     problem.make_output_dir()
     for case in problem.cases:
         res = np.load(case.input_path('results.npz'))
@@ -45,14 +45,21 @@ def _plot_1d(problem):
         plt.legend()
         plt.grid()
 
-        cen = [0.0] + nn_state['layer1.center'].tolist() + [1.0]
+        cen = nn_state['layer1.center'].tolist()
+        if left_bdy:
+            cen = [0.0] + cen
+        if right_bdy:
+            cen = cen + [1.0]
+        
         plt.plot(
             cen, np.zeros_like(cen),
             'bo', markersize=8, label='Nodes'
         )
 
         plt.tight_layout()
-        plt.savefig(problem.output_path('n_%d.pdf' % case.params['nodes']))
+        plt.savefig(problem.output_path(
+            f"{problem.get_name()}_n_{case.params['nodes']}"
+        ))
         plt.close()
 
 
@@ -66,11 +73,12 @@ class ODE1(Problem):
         )
         self.cases = [
             Simulation(
-                root=self.input_path('n_%d' % i),
+                root=self.input_path(f'n_{i}'),
                 base_command=base_cmd,
-                nodes=i, samples=20,
+                nodes=i, samples=6*i,
                 n_train=10000,
-                lr=1e-3
+                lr=1e-4,
+                tol=2.5e-5
             )
             for i in (1, 3, 7)
         ]
@@ -89,18 +97,19 @@ class ODE2(Problem):
         )
         self.cases = [
             Simulation(
-                root=self.input_path('n_%d' % i),
+                root=self.input_path(f'n_{i}'),
                 base_command=base_cmd,
                 nodes=i, samples=20*i,
                 sample_frac=0.1,
-                n_train=20000,
-                lr=5e-3
+                n_train=50000,
+                lr=2e-3,
+                tol=1e-3
             )
-            for i in (5, 7, 11)
+            for i in (3, 5, 7)
         ]
 
     def run(self):
-        _plot_1d(self)
+        _plot_1d(self, right_bdy=False)
 
 
 class ODE3(Problem):
@@ -113,11 +122,12 @@ class ODE3(Problem):
         )
         self.cases = [
             Simulation(
-                root=self.input_path('n_%d' % i),
+                root=self.input_path(f'n_{i}'),
                 base_command=base_cmd,
-                nodes=i, samples=10*i,
-                n_train=10000,
-                lr=1e-3
+                nodes=i, samples=20*i,
+                n_train=20000,
+                lr=1e-3,
+                tol=1e-3
             )
             for i in (1, 3, 7)
         ]
@@ -126,7 +136,8 @@ class ODE3(Problem):
         _plot_1d(self)
 
 
-def _plot_ode_conv(problem, n_nodes):
+def _plot_ode_conv(problem, n_nodes, pname='ode', 
+                   left_bdy=True, right_bdy=True):
     problem.make_output_dir()
 
     L1s = []
@@ -159,14 +170,21 @@ def _plot_ode_conv(problem, n_nodes):
         plt.grid()
 
         ## Plot nodal positions
-        cen = [0.0] + nn_state['layer1.center'].tolist() + [1.0]
+        cen = nn_state['layer1.center'].tolist()
+        if left_bdy:
+            cen = [0.0] + cen
+        if right_bdy:
+            cen = cen + [1.0]
+        
         plt.plot(
             cen, np.zeros_like(cen),
             'bo', markersize=8, label='Nodes'
         )
 
         plt.tight_layout()
-        plt.savefig(problem.output_path(f"{case.params['activation']}_n_{n_nodes}.pdf"))
+        plt.savefig(problem.output_path(
+            f"{pname}_{case.params['activation']}_n_{n_nodes}.pdf"
+        ))
         plt.close()
 
         ## Save errors
@@ -187,7 +205,9 @@ def _plot_ode_conv(problem, n_nodes):
     plt.ylabel(r'$L_1$ error')
     plt.legend()
     plt.tight_layout()
-    plt.savefig(problem.output_path(f'L1_error_n_{n_nodes}.pdf'))
+    plt.savefig(problem.output_path(
+        f'{pname}_L1_error_n_{n_nodes}.pdf'
+    ))
     plt.close()
 
     ## Plot L2 error as function of iteration
@@ -202,7 +222,9 @@ def _plot_ode_conv(problem, n_nodes):
     plt.ylabel(r'$L_2$ error')
     plt.legend()
     plt.tight_layout()
-    plt.savefig(problem.output_path(f'L2_error_n_{n_nodes}.pdf'))
+    plt.savefig(problem.output_path(
+        f'{pname}_L2_error_n_{n_nodes}.pdf'
+    ))
     plt.close()
 
     ## Plot Linf error as function of iteration
@@ -217,7 +239,9 @@ def _plot_ode_conv(problem, n_nodes):
     plt.ylabel(r'$L_{\infty}$ error')
     plt.legend()
     plt.tight_layout()
-    plt.savefig(problem.output_path(f'Linf_error_n_{n_nodes}.pdf'))
+    plt.savefig(problem.output_path(
+        f'{pname}_Linf_error_n_{n_nodes}.pdf'
+    ))
     plt.close()
 
 
@@ -227,7 +251,7 @@ class ODE3Conv1(Problem):
 
     def setup(self):
         self.n = 1
-        self.ns = 10*self.n
+        self.ns = 20*self.n
 
         base_cmd = (
             'python3 code/ode3.py -d $output_dir'
@@ -237,7 +261,7 @@ class ODE3Conv1(Problem):
                 root=self.input_path(f'{activation}_n_{self.n}'),
                 base_command=base_cmd,
                 nodes=self.n, samples=self.ns,
-                n_train=10000, n_skip=1,
+                n_train=20000, n_skip=1,
                 lr=1e-3,
                 tol=1e-3,
                 activation=activation
@@ -246,7 +270,7 @@ class ODE3Conv1(Problem):
         ]
 
     def run(self):
-        _plot_ode_conv(self, self.n)
+        _plot_ode_conv(self, self.n, 'ode3')
 
 
 class ODE3Conv3(Problem):
@@ -255,7 +279,7 @@ class ODE3Conv3(Problem):
 
     def setup(self):
         self.n = 3
-        self.ns = 10*self.n
+        self.ns = 20*self.n
 
         base_cmd = (
             'python3 code/ode3.py -d $output_dir'
@@ -265,7 +289,7 @@ class ODE3Conv3(Problem):
                 root=self.input_path(f'{activation}_n_{self.n}'),
                 base_command=base_cmd,
                 nodes=self.n, samples=self.ns,
-                n_train=10000, n_skip=1,
+                n_train=20000, n_skip=1,
                 lr=1e-3,
                 tol=1e-3,
                 activation=activation
@@ -274,7 +298,7 @@ class ODE3Conv3(Problem):
         ]
 
     def run(self):
-        _plot_ode_conv(self, self.n)
+        _plot_ode_conv(self, self.n, 'ode3')
 
 
 def _plot_ode_conv_sampling(problem, n_nodes):
