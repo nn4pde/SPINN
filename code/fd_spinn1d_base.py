@@ -22,7 +22,9 @@ class FDPlotter1D(Plotter1D):
             self.plt1 = lines
             self.title = plt.title('t = %.3e seconds' % pde.t)
             if self.show_exact and pde.has_exact():
+                pde.t += pde.dt
                 yn = self.pde.exact(xn)
+                pde.t -= pde.dt
                 lexact, = plt.plot(xn, yn, label='exact')
                 self.lexact = lexact
             else:
@@ -36,7 +38,9 @@ class FDPlotter1D(Plotter1D):
             self.title.set_text('t = %.3e seconds' % pde.t)
             self.plt1.set_data(xn, pn)
             if self.show_exact and pde.has_exact():
+                pde.t += pde.dt
                 yn = self.pde.exact(xn)
+                pde.t -= pde.dt
                 self.lexact.set_data(xn, yn)
         return self.get_error(xn, pn)
 
