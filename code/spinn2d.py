@@ -197,16 +197,15 @@ class SoftPlus:
         )/self.fac
 
 
-class Kernel(nn.Module):
+class RBFNNKernel(nn.Module):
     def __init__(self, n_kernel, activation=torch.tanh):
         super().__init__()
 
         self.activation = activation
         self.n_kernel = n_kernel
         self.layer1 = nn.Linear(1, n_kernel)
-        self.layer2 = nn.Linear(n_kernel, 2*n_kernel)
-        self.layer3 = nn.Linear(2*n_kernel, n_kernel)
-        self.layer4 = nn.Linear(n_kernel, 1)
+        self.layer2 = nn.Linear(n_kernel, n_kernel)
+        self.layer3 = nn.Linear(n_kernel, 1)
 
     def forward(self, x, y):
         r = x*x + y*y
@@ -215,10 +214,31 @@ class Kernel(nn.Module):
         r = r.flatten().unsqueeze(1)
         r = act(self.layer1(r))
         r = act(self.layer2(r))
-        r = act(self.layer3(r))
-        r = self.layer4(r)
+        r = self.layer3(r)
         r = r.reshape(orig_shape)
         return r
+
+
+class NNKernel(nn.Module):
+    def __init__(self, n_kernel, activation=torch.tanh):
+        super().__init__()
+
+        self.activation = activation
+        self.n_kernel = n_kernel
+        self.layer1 = nn.Linear(2, n_kernel)
+        self.layer2 = nn.Linear(n_kernel, n_kernel)
+        self.layer3 = nn.Linear(n_kernel, 1)
+
+    def forward(self, x, y):
+        act = self.activation
+        orig_shape = x.shape
+        xn, yn = x.flatten().unsqueeze(1), y.flatten().unsqueeze(1)
+        xy = torch.hstack((xn, yn))
+        z = act(self.layer1(xy))
+        z = act(self.layer2(z))
+        z = self.layer3(z)
+        z = z.reshape(orig_shape)
+        return z
 
 
 class App2D(App):
@@ -228,7 +248,7 @@ class App2D(App):
         p.add_argument(
             '--activation', '-a', dest='activation',
             default=kw.get('activation', 'gaussian'),
-            choices=['gaussian', 'softplus', 'kernel'],
+            choices=['gaussian', 'softplus', 'kernel', 'nnkernel'],
             help='Select the activation function for particles.'
         )
         p.add_argument(
@@ -241,6 +261,7 @@ class App2D(App):
         activations = {
             'gaussian': lambda x: gaussian,
             'softplus': lambda x: SoftPlus(),
-            'kernel': Kernel
+            'kernel': RBFNNKernel,
+            'nnkernel': NNKernel
         }
         return activations[args.activation](args.kernel_size)

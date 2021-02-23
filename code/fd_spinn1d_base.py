@@ -45,12 +45,13 @@ class FDPlotter1D(Plotter1D):
 
         '''
         iter = self.pde.iter
+        t = self.pde.t
         modelfname = os.path.join(dirname, 'model_%04d.pt' % iter)
         torch.save(self.nn.state_dict(), modelfname)
         rfile = os.path.join(dirname, 'results_%04d.npz' % iter)
         x, y = self.get_plot_data()
         y_exact = self.pde.exact(x)
-        np.savez(rfile, x=x, y=y, y_exact=y_exact)
+        np.savez(rfile, x=x, y=y, y_exact=y_exact, t=t, iter=iter)
 
 
 class FDSPINN1D(BasicODE):
@@ -85,9 +86,9 @@ class FDSPINN1D(BasicODE):
 
     def __init__(self, n, ns, sample_frac=1.0, dt=1e-3, T=1.0, t_skip=10):
         super().__init__(n, ns, sample_frac)
-        self.iter = 1
+        self.iter = 0
         self.dt = dt
-        self.t = self.dt
+        self.t = 0.0
         self.T = T
         self.t_skip = t_skip
         self.u0 = self.initial(self.xs)
@@ -153,14 +154,13 @@ class AppFD1D(App1D):
 
         for itr in range(n_itr):
             self.solver.solve()
-            if itr > 0:
-                self.pde.t += self.pde.dt
-                self.pde.iter += 1
-                print("Current time: %f" % self.pde.t)
+            self.pde.t += self.pde.dt
+            self.pde.iter += 1
+            print("Current time: %f" % self.pde.t)
             with torch.no_grad():
                 self.pde.u0 = self.nn(self.pde.xs)
 
-            if itr % self.pde.t_skip == 0:
+            if (itr + 1) % self.pde.t_skip == 0:
                 if out_dir is not None:
                     self.plotter.save(out_dir)
 

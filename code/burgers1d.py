@@ -45,7 +45,7 @@ class Burgers1D(IBVP2D):
 
     def interior_loss(self, nn):
         res = self._get_residue(nn)
-        r = (res**2).sum()
+        r = (res**2).mean()
         return r
 
     def has_exact(self):
@@ -81,7 +81,7 @@ class Burgers1D(IBVP2D):
             xb.detach().cpu().numpy(), tb.detach().cpu().numpy()
         )
         bc = u - tensor(ub)
-        l = (bc**2).sum()*self.nst*self.nsx
+        l = (bc**2).sum()
         return l
 
 
