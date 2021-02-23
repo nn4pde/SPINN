@@ -11,6 +11,7 @@ import matplotlib
 matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 from mayavi import mlab
+mlab.options.offscreen = True
 
 
 fontsize=32
@@ -51,7 +52,7 @@ def _plot_1d(problem, left_bdy=True, right_bdy=True):
             cen = [0.0] + cen
         if right_bdy:
             cen = cen + [1.0]
-        
+
         plt.plot(
             cen, np.zeros_like(cen),
             'bo', markersize=8, label='Nodes'
@@ -137,7 +138,7 @@ class ODE3(Problem):
         _plot_1d(self)
 
 
-def _plot_ode_conv(problem, n_nodes, pname='ode', 
+def _plot_ode_conv(problem, n_nodes, pname='ode',
                    left_bdy=True, right_bdy=True):
     problem.make_output_dir()
 
@@ -176,7 +177,7 @@ def _plot_ode_conv(problem, n_nodes, pname='ode',
             cen = [0.0] + cen
         if right_bdy:
             cen = cen + [1.0]
-        
+
         plt.plot(
             cen, np.zeros_like(cen),
             'bo', markersize=8, label='Nodes'
@@ -732,94 +733,22 @@ class SquareSlit(Problem):
 # python poisson2d_irreg_dom.py --plot --lr 1e-3 --gpu
 
 
-class Advection(Problem):
-    def get_name(self):
-        return 'advection'
-
-    def _n_nodes(self, nn_state):
-        return len(nn_state['layer1.x'])
-
-    def setup(self):
-        base_cmd = (
-            'python3 code/advection1d.py -d $output_dir '
-        )
-
-        self.cases = [
-            Simulation(
-                root=self.input_path(f'{activation}_n{i}'),
-                base_command=base_cmd,
-                nodes=i, samples=800,
-                n_train=5000,
-                lr=1e-3,
-                activation=activation,
-            )
-            for i in (10, 20, 40) for activation in ('softplus', 'gaussian',)
-        ]
-
-    def _plot_centers(self, case, nn_state):
-        x = nn_state['layer1.x']
-        y = nn_state['layer1.y']
-        w = nn_state['layer1.h']
-        figure()
-        a = plt.gca()
-        circles = [
-            plt.Circle((xi, yi), radius=wi, linewidth=1, fill=False,
-                       color='blue')
-            for xi, yi, wi in zip(x, y, w[:len(x)])
-        ]
-        c = matplotlib.collections.PatchCollection(
-            circles, match_original=True
-        )
-        a.add_collection(c)
-        plt.xlim(-1.5, 1.5)
-        plt.axis('equal')
-        plt.tight_layout()
-        plt.grid()
-        plt.xlabel('x')
-        plt.ylabel('y')
-        fname = self.output_path(
-            'centers_n_%s_%d.pdf' % (case.params['activation'], len(x))
-        )
-        plt.savefig(fname)
-        plt.close()
-
-    def _plot_solution(self, case, nodes):
-        res = np.load(case.input_path('results.npz'))
-        x, t = res['x'], res['t']
-        u, u_ex = res['u'], res['u_exact']
-        colors = ['black', 'blue', 'green']
-        figure()
-
-        for i in range(3):
-            plt.plot(
-                x[:, i], u_ex[:, i],
-                linewidth=4, color=colors[i],
-                label='Exact (t=%.1f)' % t[0, i]
-            )
-            label = 'SPINN' if i == 2 else None
-            plt.plot(
-                x[:, i], u[:, i], '--', color='red',
-                linewidth=4, label=label
-            )
-        plt.xlabel(r'$x$', fontsize=24)
-        plt.ylabel(r'$u(x)$', fontsize=24)
-        plt.legend(loc='upper left')
-        plt.grid()
-        plt.xlim(-1.0, 1.0)
-        plt.ylim(-0.25, 1.5)
-        fname = self.output_path(
-            'n_%s_%d.pdf' % (case.params['activation'], nodes)
-        )
-        plt.savefig(fname)
-        plt.close()
-
-    def run(self):
-        self.make_output_dir()
-        for case in self.cases:
-            nn_state = torch.load(case.input_path('model.pt'))
-            nodes = self._n_nodes(nn_state)
-            self._plot_solution(case, nodes)
-            self._plot_centers(case, nn_state)
+def plot_centers(x, y, w):
+    figure()
+    a = plt.gca()
+    circles = [
+        plt.Circle((xi, yi), radius=wi, linewidth=1, fill=False,
+                   color='blue')
+        for xi, yi, wi in zip(x, y, w[:len(x)])
+    ]
+    c = matplotlib.collections.PatchCollection(
+        circles, match_original=True
+    )
+    a.add_collection(c)
+    plt.scatter(x, y, marker='+')
+    plt.grid()
+    plt.xlabel('x')
+    plt.ylabel('y')
 
 
 class Cavity(Problem):
@@ -906,8 +835,10 @@ class Cavity(Problem):
 
 def get_results(case, times):
     files = sorted(Path(case.input_path()).glob('results_*.npz'))
+    mfiles = sorted(Path(case.input_path()).glob('model_*.pt'))
     data = [np.load(str(f)) for f in files]
     result = []
+    models = []
     count = 0
     for time in times:
         while count < len(data):
@@ -915,9 +846,23 @@ def get_results(case, times):
             count += 1
             if abs(d['t'] - time) < 1e-10:
                 result.append(d)
+                models.append(torch.load(mfiles[count-1]))
                 break
-    assert len(result) == len(times)
-    return result
+
+    assert len(result) == len(times), "Insufficient output data?"
+    return result, models
+
+
+def plot_fd_centers(problem, models, times):
+    figure()
+    for t, model in zip(times, models):
+        x = model['layer1.center'].numpy()
+        plt.plot(x, t*np.ones_like(x), 'o', color='black')
+    plt.xlabel(r'$x$')
+    plt.ylabel(r'$t$')
+    plt.grid()
+    fname = problem.output_path('centers_fd.pdf')
+    plt.savefig(fname)
 
 
 class BurgersFD(Problem):
@@ -948,7 +893,7 @@ class BurgersFD(Problem):
         ]
 
     def _plot_solution(self, case, nodes, exact):
-        data = get_results(case, [0.1, 0.3, 0.6, 1.0])
+        data, models = get_results(case, [0.1, 0.3, 0.6, 1.0])
         colors = ['black', 'blue', 'green', 'violet']
         x_ex = exact['x']
         u_ex = exact['u']
@@ -956,16 +901,17 @@ class BurgersFD(Problem):
 
         for count, i in enumerate((1, 3, 6, 10)):
             t = i*0.1
-            plt.plot(
-                x_ex + 0.5, u_ex[i],
-                linewidth=4, color=colors[count],
-                label='Exact (t=%.1f)' % t
-            )
-            label = 'SPINN' if i == 10 else None
             res = data[count]
             plt.plot(
-                res['x'], res['y'], '--', color='red',
-                linewidth=4, label=label
+                res['x'], res['y'], 'o-', color='red',
+                markevery=10, markersize=8, linewidth=4,
+                label='SPINN (t=%.1f)' % t
+            )
+            label = 'PyClaw' if i == 10 else None
+            plt.plot(
+                x_ex + 0.5, u_ex[i], '--',
+                linewidth=6, color='black',
+                label=label
             )
         plt.xlabel(r'$x$', fontsize=24)
         plt.ylabel(r'$u(x)$', fontsize=24)
@@ -989,6 +935,196 @@ class BurgersFD(Problem):
             nodes = self._n_nodes(nn_state)
             self._plot_solution(case, nodes, exact)
 
+        times = [0.1, 0.3, 0.6, 1.0]
+        case = self.cases[1]
+        data, models = get_results(case, times)
+        plot_fd_centers(self, models, times)
+
+
+class TimeVarying(Problem):
+    def _n_nodes(self, nn_state):
+        return len(nn_state['layer1.center'])
+
+    def _plot_fd_centers(self, models, times):
+        plot_fd_centers(self, models, times)
+
+    def _compare_solution(self, case, st_case, times):
+        data, models = get_results(case, times)
+        self._plot_fd_centers(models, times)
+        sd = np.load(st_case.input_path('results.npz'))
+        st_time = sd['t']
+        t0 = st_time[0, 0]
+        dt = st_time[0, 1] - t0
+        figure()
+        for i, t in enumerate(times):
+            d = data[i]
+            plt.plot(
+                d['x'], d['y'], color='blue', marker='o', markersize=10,
+                markevery=3, linewidth=4, label='FD (t=%.2f)' % t
+            )
+            j = round((t - t0)/dt)
+            plt.plot(
+                sd['x'][:, j], sd['u'][:, j], color='red', marker='^',
+                markersize=10, markevery=3, linewidth=4,
+                label='ST'
+            )
+            label = 'Exact' if i == (len(times) - 1) else None
+            plt.plot(
+                d['x'], d['y_exact'], '--', color='black',
+                linewidth=6, label=label
+            )
+        plt.xlabel(r'$x$', fontsize=32)
+        plt.ylabel(r'$u(x)$', fontsize=32)
+
+    def _plot_solution(self, case, st_case, times):
+        self._compare_solution(case, st_case, times)
+        plt.legend(loc='upper left', fontsize=20)
+        plt.grid()
+        plt.xlim(0, 1)
+        plt.ylim(0.0, 2.5)
+        fname = self.output_path('u_compare.pdf')
+        plt.savefig(fname)
+        plt.close()
+
+    def _plot_3d(self, st_case, warp_scale=0.5):
+        sd = np.load(st_case.input_path('results.npz'))
+        mlab.figure(bgcolor=(1, 1, 1),
+                    fgcolor=(0, 0, 0), size=(800, 800))
+        s = mlab.surf(sd['xp'], sd['yp'], sd['up'], warp_scale=warp_scale,
+                      colormap='viridis')
+        mlab.outline(s)
+        mlab.axes(s, xlabel='x', ylabel='t', zlabel='u')
+        s.actor.property.edge_visibility = True
+        fname = self.output_path('st_sol.png')
+        mlab.savefig(fname)
+        mlab.close()
+
+    def _plot_centers(self, st_case):
+        pth = Path(st_case.input_path('model.pt'))
+        nn_state = torch.load(str(pth))
+        x = nn_state['layer1.x']
+        y = nn_state['layer1.y']
+        w = nn_state['layer1.h']
+        plot_centers(x, y, w)
+        plt.xlim(-0.25, 1.25)
+        plt.axis('equal')
+        plt.tight_layout()
+        fname = self.output_path('centers_st.pdf')
+        plt.savefig(fname)
+        plt.close()
+
+
+class Heat(TimeVarying):
+    def get_name(self):
+        return 'heat'
+
+    def setup(self):
+        base_cmd = (
+            'python3 code/heat1d_fd_spinn.py -d $output_dir '
+        )
+
+        self.fd_cases = [
+            Simulation(
+                root=self.input_path(f'fd_n{i}'),
+                base_command=base_cmd,
+                nodes=i, samples=200,
+                n_train=5000,
+                lr=1e-3,
+                tol=2e-5,
+                dt=0.0025,
+                t_skip=4,
+                duration=0.2,
+                activation='gaussian',
+                sample_frac=1.0,
+            )
+            for i in (20,) for activation in ('gaussian',)
+        ]
+        base_cmd = 'python3 code/heat1d.py -d $output_dir '
+        self.st_cases = [
+            Simulation(
+                root=self.input_path(f'st_n100'),
+                base_command=base_cmd,
+                nodes=100, samples=400,
+                n_train=10000,
+                lr=1e-2,
+                tol=2e-5,
+                duration=0.5,
+                activation='gaussian',
+                sample_frac=1.0,
+            )
+        ]
+        self.cases = self.fd_cases + self.st_cases
+
+    def run(self):
+        self.make_output_dir()
+        case = self.fd_cases[0]
+        st_case = self.st_cases[0]
+        times = [0.01, 0.05, 0.1, 0.2]
+        self._plot_solution(case, st_case, times)
+        self._plot_3d(st_case)
+        self._plot_centers(st_case)
+
+
+class Advection(TimeVarying):
+    def get_name(self):
+        return 'advection'
+
+    def _n_nodes(self, nn_state):
+        return len(nn_state['layer1.x'])
+
+    def setup(self):
+        base_cmd = 'python3 code/advection1d_fd_spinn.py -d $output_dir '
+
+        self.fd_cases = [
+            Simulation(
+                root=self.input_path(f'fd_n10'),
+                base_command=base_cmd,
+                nodes=10, samples=100,
+                n_train=5000,
+                lr=5e-3,
+                tol=1e-6,
+                dt=0.0025,
+                t_skip=40,
+                duration=1.0,
+            )
+        ]
+
+        base_cmd = (
+            'python3 code/advection1d.py -d $output_dir '
+        )
+
+        self.st_cases = [
+            Simulation(
+                root=self.input_path(f'st_n40'),
+                base_command=base_cmd,
+                nodes=40, samples=800,
+                n_train=5000,
+                lr=1e-3,
+                activation='gaussian',
+            )
+        ]
+
+        self.cases = self.fd_cases + self.st_cases
+
+    def _plot_solution(self, case, st_case, times):
+        self._compare_solution(case, st_case, times)
+        plt.legend(loc='upper left', fontsize=20)
+        plt.grid()
+        plt.xlim(-1.0, 1.0)
+        plt.ylim(-0.1, 1.25)
+        fname = self.output_path('u_compare.pdf')
+        plt.savefig(fname)
+        plt.close()
+
+    def run(self):
+        self.make_output_dir()
+        case = self.fd_cases[0]
+        st_case = self.st_cases[0]
+        times = [0.1, 0.5, 1.0]
+        self._plot_solution(case, st_case, times)
+        self._plot_3d(st_case, warp_scale=1.0)
+        self._plot_centers(st_case)
+
 
 if __name__ == '__main__':
     PROBLEMS = [
@@ -1000,6 +1136,7 @@ if __name__ == '__main__':
         SquareSlit,
         Advection,
         BurgersFD,
+        Heat,
         Cavity
     ]
     automator = Automator(

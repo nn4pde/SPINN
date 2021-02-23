@@ -30,7 +30,6 @@ class FDPlotter1D(Plotter1D):
             else:
                 yn = self.pde.u0.detach().cpu().numpy()
             plt.grid()
-            plt.xlim(-0.1, 1.1)
             ymax, ymin = np.max(yn), np.min(yn)
             delta = (ymax - ymin)*0.2
             plt.ylim(ymin - delta, ymax + delta)
