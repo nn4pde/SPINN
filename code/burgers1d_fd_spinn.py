@@ -25,7 +25,7 @@ class Burgers1D(FDSPINN1D):
         return 100*(bc**2).sum()
 
     def plot_points(self):
-        n = 50
+        n = min(2*self.ns, 500)
         x = np.linspace(0.0, 1.0, n)
         return x
 

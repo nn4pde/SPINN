@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 from re import L
+from pathlib import Path
 
 from automan.api import Problem
 from automan.api import Automator, Simulation, filter_cases
@@ -865,6 +866,92 @@ class Cavity(Problem):
         self.plot_comparison()
 
 
+def get_results(case, times):
+    files = sorted(Path(case.input_path()).glob('results_*.npz'))
+    data = [np.load(str(f)) for f in files]
+    result = []
+    count = 0
+    for time in times:
+        while count < len(data):
+            d = data[count]
+            count += 1
+            if abs(d['t'] - time) < 1e-10:
+                result.append(d)
+                break
+    assert len(result) == len(times)
+    return result
+
+
+class BurgersFD(Problem):
+    def get_name(self):
+        return 'burgers_fd'
+
+    def _n_nodes(self, nn_state):
+        return len(nn_state['layer1.center'])
+
+    def setup(self):
+        base_cmd = (
+            'python3 code/burgers1d_fd_spinn.py -d $output_dir '
+        )
+
+        self.cases = [
+            Simulation(
+                root=self.input_path(f'{activation}_n{i}'),
+                base_command=base_cmd,
+                nodes=i, samples=400,
+                n_train=5000,
+                lr=1e-4,
+                tol=1e-6,
+                dt=0.01,
+                activation=activation,
+                sample_frac=1.0,
+            )
+            for i in (20, 40, 80) for activation in ('gaussian',)
+        ]
+
+    def _plot_solution(self, case, nodes, exact):
+        data = get_results(case, [0.1, 0.3, 0.6, 1.0])
+        colors = ['black', 'blue', 'green', 'violet']
+        x_ex = exact['x']
+        u_ex = exact['u']
+        figure()
+
+        for count, i in enumerate((1, 3, 6, 10)):
+            t = i*0.1
+            plt.plot(
+                x_ex + 0.5, u_ex[i],
+                linewidth=4, color=colors[count],
+                label='Exact (t=%.1f)' % t
+            )
+            label = 'SPINN' if i == 10 else None
+            res = data[count]
+            plt.plot(
+                res['x'], res['y'], '--', color='red',
+                linewidth=4, label=label
+            )
+        plt.xlabel(r'$x$', fontsize=24)
+        plt.ylabel(r'$u(x)$', fontsize=24)
+        plt.legend(loc='upper right')
+        plt.grid()
+        plt.xlim(0.0, 1.0)
+        plt.ylim(-1.15, 1.5)
+        fname = self.output_path(
+            '%s_n%d.pdf' % (case.params['activation'], nodes)
+        )
+        plt.savefig(fname)
+        plt.close()
+
+    def run(self):
+        self.make_output_dir()
+        fname = os.path.join('code', 'data', 'pyclaw_burgers1d_sine2.npz')
+        exact = np.load(fname)
+        for case in self.cases:
+            pth = sorted(Path(case.input_path()).glob('model_*.pt'))
+            nn_state = torch.load(str(pth[0]))
+            nodes = self._n_nodes(nn_state)
+            self._plot_solution(case, nodes, exact)
+
+
 if __name__ == '__main__':
     PROBLEMS = [
         ODE1, ODE2, ODE3,
@@ -874,6 +961,7 @@ if __name__ == '__main__':
         Poisson2DSineNodes,
         SquareSlit,
         Advection,
+        BurgersFD,
         Cavity
     ]
     automator = Automator(

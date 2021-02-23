@@ -63,7 +63,7 @@ class IBVP2D(PDE):
 
     def _compute_derivatives(self, u, xs, ts):
         du = ag.grad(
-            outputs=u, inputs=(xs, ts), 
+            outputs=u, inputs=(xs, ts),
             grad_outputs=torch.ones_like(u),
             retain_graph=True, create_graph=True
         )
@@ -86,9 +86,7 @@ class IBVP2D(PDE):
         nt = round((T/size) + 0.49)
         return nx, nt
 
-    def _get_points_mgrid(self, xL, xR, T, 
-        nx, nt, endpoint=False):
-
+    def _get_points_mgrid(self, xL, xR, T, nx, nt, endpoint=False):
         if endpoint:
             slx = slice(xL, xR, nx*1j)
             slt = slice(0.0, T, nt*1j)
@@ -118,11 +116,8 @@ class IBVP2D(PDE):
 
         return (xs, ts)
 
-    def __init__(self, n_nodes, ns, 
-        nb=None, nbs=None,
-        xL=0.0, xR=1.0, T=1.0,
-        sample_frac=1.0):
-
+    def __init__(self, n_nodes, ns, nb=None, nbs=None, xL=0.0, xR=1.0,
+                 T=1.0, sample_frac=1.0):
         self.xL = xL
         self.xR = xR
         self.T  = T
@@ -131,7 +126,7 @@ class IBVP2D(PDE):
 
         # Interior nodes
         self.nx, self.nt = self._get_points_split((xR - xL), T, n_nodes)
-        self.i_nodes = self._get_points_mgrid(xL, xR, T, 
+        self.i_nodes = self._get_points_mgrid(xL, xR, T,
             self.nx, self.nt, endpoint=False)
 
         # Fixed nodes
@@ -144,9 +139,9 @@ class IBVP2D(PDE):
 
         # Interior samples
         self.nsx, self.nst = self._get_points_split((xR - xL), T, ns)
-        xi, ti = self._get_points_mgrid(xL, xR, T, 
+        xi, ti = self._get_points_mgrid(xL, xR, T,
             self.nsx, self.nst, endpoint=False)
-        self.p_samples = (tensor(xi, requires_grad=True), 
+        self.p_samples = (tensor(xi, requires_grad=True),
                           tensor(ti, requires_grad=True))
 
         self.n_interior = len(self.p_samples[0])
@@ -173,7 +168,7 @@ class IBVP2D(PDE):
         if abs(self.sample_frac - 1.0) < 1e-3:
             return self.p_samples
         else:
-            idx = np.random.choice(self.rng_interior, 
+            idx = np.random.choice(self.rng_interior,
                 size=self.sample_size, replace=False)
             x, y = self.p_samples
             return x[idx], y[idx]
@@ -182,7 +177,7 @@ class IBVP2D(PDE):
         return self.b_samples
 
     def plot_points(self):
-        x, t = np.mgrid[self.xL:self.xR:self.nsx*1j, 
+        x, t = np.mgrid[self.xL:self.xR:self.nsx*1j,
                         0.0:self.T:self.nst*1j]
         return x, t
 
