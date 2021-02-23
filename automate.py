@@ -301,7 +301,8 @@ class ODE3Conv3(Problem):
         _plot_ode_conv(self, self.n, 'ode3')
 
 
-def _plot_ode_conv_sampling(problem, n_nodes):
+def _plot_ode_conv_sampling(problem, n_nodes, 
+                            left_bdy=True, right_bdy=True):
     problem.make_output_dir()
 
     L1s = []
