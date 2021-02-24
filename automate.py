@@ -60,7 +60,7 @@ def _plot_1d(problem, left_bdy=True, right_bdy=True):
 
         plt.tight_layout()
         plt.savefig(problem.output_path(
-            f"{problem.get_name()}_n_{case.params['nodes']}"
+            f"{problem.get_name()}_n_{case.params['nodes']}.pdf"
         ))
         plt.close()
 
@@ -136,7 +136,6 @@ class ODE3(Problem):
 
     def run(self):
         _plot_1d(self)
-
 
 def _plot_ode_conv(problem, n_nodes, pname='ode',
                    left_bdy=True, right_bdy=True):
@@ -439,6 +438,242 @@ class ODE2Conv6(Problem):
 
     def run(self):
         _plot_ode_conv_sampling(self, self.n, 'ode2', right_bdy=False)
+
+
+class ODE1Var(Problem):
+    def get_name(self):
+        return 'ode1_var'
+
+    def setup(self):
+        base_cmd = (
+            'python3 code/ode1_var.py -d $output_dir '
+        )
+        self.cases = [
+            Simulation(
+                root=self.input_path(f'n_{i}'),
+                base_command=base_cmd,
+                nodes=i, samples=500,
+                n_train=5000,
+                lr=1e-3,
+                tol=-10.0
+            )
+            for i in (5,)
+        ]
+
+    def run(self):
+        _plot_1d(self)
+
+
+class ODE3Var(Problem):
+    def get_name(self):
+        return 'ode3_var'
+
+    def setup(self):
+        base_cmd = (
+            'python3 code/ode3_var.py -d $output_dir '
+        )
+        self.cases = [
+            Simulation(
+                root=self.input_path(f'n_{i}'),
+                base_command=base_cmd,
+                nodes=i, samples=200,
+                n_train=5000,
+                lr=5e-3,
+                tol=-10.0
+            )
+            for i in (5,)
+        ]
+
+    def run(self):
+        _plot_1d(self)
+
+
+def _plot_1d_fourier(problem, left_bdy=True, right_bdy=True):
+    problem.make_output_dir()
+    for case in problem.cases:
+        res = np.load(case.input_path('results.npz'))
+        nn_state = torch.load(case.input_path('model.pt'))
+
+        plt.figure(figsize=(12,12))
+        plt.plot(
+            res['x'], res['y_exact'],
+            color='black', linewidth=6,
+            label='Exact'
+        )
+        plt.plot(
+            res['x'], res['y'], 'ro-',
+            markersize=8, linewidth=3,
+            label='Fourier-SPINN'
+        )
+        plt.xlabel(r'$x$')
+        plt.ylabel(r'$u(x)$')
+        plt.legend()
+        plt.grid()
+
+        plt.tight_layout()
+        plt.savefig(problem.output_path(
+            f"{problem.get_name()}_m_{case.params['modes']}.pdf"
+        ))
+        plt.close()
+
+class ODE1Fourier(Problem):
+    def get_name(self):
+        return 'ode1_fourier'
+
+    def setup(self):
+        base_cmd = (
+            'python3 code/ode1_fourier.py -d $output_dir '
+        )
+        self.cases = [
+            Simulation(
+                root=self.input_path(f'n_{i}'),
+                base_command=base_cmd,
+                modes=i, samples=20,
+                n_train=5000,
+                lr=1e-3,
+                tol=1e-4
+            )
+            for i in (10,)
+        ]
+
+    def run(self):
+        _plot_1d_fourier(self)
+
+
+class ODE3Fourier(Problem):
+    def get_name(self):
+        return 'ode3_fourier'
+
+    def setup(self):
+        base_cmd = (
+            'python3 code/ode3_fourier.py -d $output_dir '
+        )
+        self.cases = [
+            Simulation(
+                root=self.input_path(f'n_{i}'),
+                base_command=base_cmd,
+                modes=i, samples=50,
+                n_train=5000,
+                lr=5e-3,
+                tol=1e-2
+            )
+            for i in (50,)
+        ]
+
+    def run(self):
+        _plot_1d_fourier(self)
+
+
+class ODE3Comp(Problem):
+    def get_name(self):
+        return 'ode3_comp'
+
+    def setup(self):
+        base_cmd_1 = (
+            'python3 code/ode3.py -d $output_dir '
+        )
+        base_cmd_2 = (
+            'python3 code/ode3_var.py -d $output_dir '
+        )
+        base_cmd_3 = (
+            'python3 code/ode3_fourier.py -d $output_dir '
+        )
+        self.cases = [
+            Simulation(
+                root=self.input_path('strong_n_3'),
+                base_command=base_cmd_1,
+                nodes=3, samples=60,
+                n_train=20000,
+                lr=1e-3,
+                tol=1e-3
+            ),
+            Simulation(
+                root=self.input_path('weak_n_5'),
+                base_command=base_cmd_2,
+                nodes=5, samples=200,
+                n_train=5000,
+                lr=5e-3,
+                tol=-10.0
+            ),
+            Simulation(
+                root=self.input_path('fourier_m_50'),
+                base_command=base_cmd_3,
+                modes=50, samples=50,
+                n_train=5000,
+                lr=1e-2,
+                tol=1e-4
+            )
+        ]
+
+    def run(self):
+        self.make_output_dir()
+        
+        left_bdy = True
+        right_bdy = True
+
+        ## Hack - hard coded order in which cases are run
+        case_count = 0
+        case_label=['SPINN', 'Var-SPINN', 'Fourier-SPINN']
+        case_color=['red', 'blue', 'green']
+        case_style=['o-', 's', '^']
+        case_every=[1, 3, 2]
+
+        plt.figure(figsize=(12,12))
+
+        for case in self.cases:
+            res = np.load(case.input_path('results.npz'))
+            nn_state = torch.load(case.input_path('model.pt'))
+
+            if case_count == 0:
+                plt.plot(
+                    res['x'], res['y_exact'],
+                    color='black', linewidth=6,
+                    label='Exact'
+                )
+
+            plt.plot(
+                res['x'], res['y'], 
+                case_style[case_count],
+                color=case_color[case_count],
+                markersize=10, linewidth=3,
+                markevery=case_every[case_count],
+                label=case_label[case_count]
+            )
+            plt.xlabel(r'$x$')
+            plt.ylabel(r'$u(x)$')
+            plt.legend()
+            plt.grid()
+
+            if case_count == 0:
+                cen = nn_state['layer1.center'].tolist()
+                if left_bdy:
+                    cen = [0.0] + cen
+                if right_bdy:
+                    cen = cen + [1.0]
+
+                plt.plot(
+                    cen, np.zeros_like(cen),
+                    'yP', markersize=10, label='SPINN nodes'
+                )
+            elif case_count == 1:
+                cen = nn_state['layer1.center'].tolist()
+                if left_bdy:
+                    cen = [0.0] + cen
+                if right_bdy:
+                    cen = cen + [1.0]
+
+                plt.plot(
+                    cen, np.zeros_like(cen),
+                    'cX', markersize=10, label='Var-SPINN nodes'
+                )
+
+            case_count += 1 
+
+        plt.tight_layout()
+        plt.savefig(self.output_path(
+            f"{self.get_name()}.pdf"
+        ))
+        plt.close()
 
 
 def _plot_pde_conv(problem, n_nodes):
@@ -1131,6 +1366,9 @@ if __name__ == '__main__':
         ODE1, ODE2, ODE3,
         ODE3Conv1, ODE3Conv3,
         ODE2Conv6,
+        ODE1Var, ODE3Var,
+        ODE1Fourier, ODE3Fourier,
+        ODE3Comp,
         Poisson2DSineConv,
         Poisson2DSineNodes,
         SquareSlit,

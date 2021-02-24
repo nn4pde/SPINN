@@ -15,4 +15,4 @@ if __name__ == '__main__':
         nn_cls=Fourier1D,
         plotter_cls=FourierPlotter1D
     )
-    app.run(samples=15, modes=10, lr=1e-2)
+    app.run(samples=20, modes=10, lr=1e-2)
