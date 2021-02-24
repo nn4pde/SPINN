@@ -19,15 +19,14 @@ class HeatPlotter(Plotter2D):
         torch.save(self.nn.state_dict(), modelfname)
         rfile = os.path.join(dirname, 'results.npz')
         xp, yp, up = self.get_plot_data()
-        u_exact = self.pde.exact(xp, yp)
+        uex_p = self.pde.exact(xp, yp)
         x, t = np.mgrid[0:1:100j, 0:0.2:21j]
         xt, tt = tensor(x.ravel()), tensor(t.ravel())
         u = self.nn(xt, tt).detach().cpu().numpy()
+        u_exact = self.pde.exact(x, t)
         u.shape = x.shape
-        np.savez(
-            rfile, xp=xp, yp=yp, up=up, u_exact=u_exact,
-            x=x, t=t, u=u
-        )
+        np.savez(rfile, x=x, t=t, u=u, u_exact=u_exact,
+                 xp=xp, yp=yp, up=up, uex_p=uex_p)
 
 
 class Heat1D(IBVP2D):

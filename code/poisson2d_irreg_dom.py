@@ -1,5 +1,6 @@
 # Poisson equation on a general domain
 
+import os
 import numpy as np
 import torch
 import torch.autograd as ag
@@ -7,34 +8,43 @@ from mayavi import mlab
 from common import PDE, tensor
 from spinn2d import Plotter2D, App2D, SPINN2D
 
+
 class Poisson2D(PDE):
     @classmethod
     def from_args(cls, args):
-        return cls(args.f_nodes_int, args.f_nodes_bdy, 
+        return cls(args.f_nodes_int, args.f_nodes_bdy,
             args.f_samples_int, args.f_samples_bdy,
             args.sample_frac)
 
     @classmethod
     def setup_argparse(cls, parser, **kw):
         p = parser
+        d = os.path.abspath(os.path.dirname(__file__))
+        def _f(s):
+            return os.path.join(d, 'mesh_data', s)
+
         p.add_argument(
             '--f_nodes_int', '-ni', dest='f_nodes_int',
-            default=kw.get('f_nodes_int', 'mesh_data/interior_nodes.dat'), type=str,
+            default=kw.get('f_nodes_int', _f('interior_nodes.dat')),
+            type=str,
             help='File containing interior nodes.'
         )
         p.add_argument(
             '--f_nodes_bdy', '-nb', dest='f_nodes_bdy',
-            default=kw.get('f_nodes_bdy', 'mesh_data/boundary_nodes.dat'), type=str,
+            default=kw.get('f_nodes_bdy', _f('boundary_nodes.dat')),
+            type=str,
             help='File containing boundary nodes.'
         )
         p.add_argument(
             '--f_samples_int', '-si', dest='f_samples_int',
-            default=kw.get('f_samples_int', 'mesh_data/interior_samples.dat'), type=str,
+            default=kw.get('f_samples_int', _f('interior_samples.dat')),
+            type=str,
             help='File containing interior samples.'
         )
         p.add_argument(
             '--f_samples_bdy', '-sb', dest='f_samples_bdy',
-            default=kw.get('f_samples_bdy', 'mesh_data/boundary_samples.dat'), type=str,
+            default=kw.get('f_samples_bdy', _f('boundary_samples.dat')),
+            type=str,
             help='File containing boundary samples.'
         )
         p.add_argument(
@@ -112,7 +122,7 @@ class Poisson2D(PDE):
         xb, yb = self._extract_coordinates(f_samples_bdy)
         self.boundary_samples = (tensor(xb, requires_grad=True),
                                  tensor(yb, requires_grad=True))
-        
+
     def nodes(self):
         return self.interior_nodes
 
@@ -123,7 +133,7 @@ class Poisson2D(PDE):
         if abs(self.sample_frac - 1.0) < 1e-3:
             return self.interior_samples
         else:
-            idx = np.random.choice(self.rng_interior, 
+            idx = np.random.choice(self.rng_interior,
                 size=self.sample_size, replace=False)
             x, y = self.interior_samples
             return x[idx], y[idx]
@@ -167,6 +177,7 @@ def _vtu2data(fname):
     scalar = ug.point_data.scalars.to_array()
     return pts, scalar
 
+
 def _get_errors(nn, fvtu):
     pts, u_exact = _vtu2data(fvtu)
     x = pts[:,0]
@@ -202,14 +213,7 @@ class PointCloud(Plotter2D):
         return self.get_error(xn, yn, pn)
 
 
-if __name__ == '__main__':
-    app = App2D(
-        pde_cls=Poisson2D,
-        nn_cls=SPINN2D,
-        plotter_cls=PointCloud
-    )
-    app.run(lr=1e-3)
-
+def plot(app):
     fvtu = 'fem/poisson_irregular000000.vtu'
     L1, L2, Linf = _get_errors(app.nn, fvtu)
 
@@ -217,10 +221,19 @@ if __name__ == '__main__':
     print("L2 error = ", L2)
     print("Linf error = ", Linf)
 
-    mlab.figure(size=(700, 700), fgcolor=(0,0,0), bgcolor=(1,1,1))
+    mlab.figure(size=(700, 700), fgcolor=(0, 0, 0), bgcolor=(1, 1, 1))
     pts, u_fem = _vtu2data(fvtu)
     src = mlab.pipeline.open(fvtu)
     s = mlab.pipeline.surface(src)
     mlab.colorbar(s)
     mlab.show()
 
+
+if __name__ == '__main__':
+    app = App2D(
+        pde_cls=Poisson2D,
+        nn_cls=SPINN2D,
+        plotter_cls=PointCloud
+    )
+    app.run(lr=1e-3)
+    #plot(app)

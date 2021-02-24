@@ -13,6 +13,8 @@ import matplotlib.pyplot as plt
 from mayavi import mlab
 mlab.options.offscreen = True
 
+USE_GPU = False
+
 
 fontsize=32
 font = {'size': fontsize}
@@ -63,6 +65,61 @@ def _plot_1d(problem, left_bdy=True, right_bdy=True):
             f"{problem.get_name()}_n_{case.params['nodes']}.pdf"
         ))
         plt.close()
+
+
+def _mlab_figure(fgcolor=(0, 0, 0), bgcolor=(1, 1, 1), size=(1000, 1000)):
+    f = mlab.figure(fgcolor=fgcolor, bgcolor=bgcolor, size=size)
+    return f
+
+
+def _plot_mlab_nodes(state):
+    x = state['layer1.x'].numpy()
+    y = state['layer1.y'].numpy()
+    w = state['layer1.h'].numpy()
+    p = mlab.points3d(
+        x, y, np.zeros_like(x), color=(1, 0, 0), scale_factor=0.05
+    )
+    p1 = mlab.points3d(
+        x, y, np.zeros_like(x), w[:len(x)], color=(1.0, 0.0, 0.0),
+        mode='2dcircle', scale_factor=1.0, opacity=0.8
+    )
+    p1.glyph.glyph_source.glyph_source.resolution = 40
+    return p, p1
+
+
+def plot_solution_nodes(plot_data, state, fname):
+    sd = plot_data
+    f = _mlab_figure()
+    s = mlab.surf(sd['x'], sd['y'], sd['u'], warp_scale=0.0,
+                  colormap='viridis', opacity=0.4)
+    p, p1 = _plot_mlab_nodes(state)
+    mlab.axes(s, xlabel='x', ylabel='t', y_axis_visibility=False)
+    s.scene.z_plus_view()
+    mlab.savefig(fname)
+    mlab.close()
+
+
+def plot_3d_solution(plot_data, fname, warp_scale=0.5):
+    sd = plot_data
+    f = _mlab_figure()
+    s = mlab.surf(sd['x'], sd['y'], sd['u'], warp_scale=warp_scale,
+                  colormap='viridis')
+    ex = mlab.surf(sd['x'], sd['y'], sd['u_exact'],
+                   warp_scale=warp_scale, representation='wireframe',
+                   color=(0, 0, 0))
+    mlab.outline(s)
+    mlab.axes(s, xlabel='x', ylabel='t', zlabel='u')
+    mlab.savefig(fname)
+    mlab.close()
+
+
+def plot_ug_solution(vtu, u):
+    src = mlab.pipeline.open(vtu)
+    ug = src.reader.output
+    ug.point_data.scalars = u
+    s = mlab.pipeline.surface(src, colormap='viridis')
+    s.scene.z_plus_view()
+    return s
 
 
 class ODE1(Problem):
@@ -696,8 +753,9 @@ def _plot_pde_conv(problem, n_nodes):
         u_exact = res['u_exact']
 
         mlab.figure(size=(700, 700), bgcolor=(1,1,1), fgcolor=(0,0,0))
-        m_plt = mlab.surf(x, y, u, opacity=1.0)
-        mlab.surf(x, y, u_exact, representation='wireframe')
+        m_plt = mlab.surf(x, y, u, colormap='viridis', opacity=1.0)
+        mlab.surf(x, y, u_exact, colormap='viridis',
+                  representation='wireframe')
         mlab.colorbar(m_plt)
         mlab.savefig(problem.output_path(f"sine2d_{case.params['activation']}_n_{n_nodes}.pdf"))
         mlab.close()
@@ -765,6 +823,8 @@ class Poisson2DSineConv(Problem):
         base_cmd = (
             'python3 code/poisson2d_sine.py -d $output_dir'
         )
+        kwargs = dict(gpu=None) if USE_GPU else {}
+
         self.cases = [
             Simulation(
                 root=self.input_path(f'{activation}_n_{self.n}'),
@@ -774,7 +834,7 @@ class Poisson2DSineConv(Problem):
                 lr=1e-3,
                 tol=1e-3,
                 activation=activation,
-                gpu=None
+                **kwargs
             )
             for activation in ('gaussian', 'softplus', 'kernel')
         ]
@@ -803,8 +863,9 @@ def _plot_pde_conv_nodes(problem):
         u_exact = res['u_exact']
 
         mlab.figure(size=(700, 700), bgcolor=(1,1,1), fgcolor=(0,0,0))
-        m_plt = mlab.surf(x, y, u, opacity=1.0)
-        mlab.surf(x, y, u_exact, representation='wireframe')
+        m_plt = mlab.surf(x, y, u, colormap='viridis', opacity=1.0)
+        mlab.surf(x, y, u_exact, colormap='viridis',
+                  representation='wireframe')
         mlab.colorbar(m_plt)
         mlab.savefig(problem.output_path(f"sine2d_n_{case.params['nodes']}.pdf"))
         mlab.close()
@@ -869,6 +930,8 @@ class Poisson2DSineNodes(Problem):
         base_cmd = (
             'python3 code/poisson2d_sine.py -d $output_dir'
         )
+        kwargs = dict(gpu=None) if USE_GPU else {}
+
         self.cases = [
             Simulation(
                 root=self.input_path(f'n_{n}'),
@@ -878,7 +941,7 @@ class Poisson2DSineNodes(Problem):
                 lr=1e-3,
                 tol=1e-3,
                 activation='softplus',
-                gpu=None
+                **kwargs
             )
             for n in (25, 50, 75, 100)
         ]
@@ -938,6 +1001,7 @@ def _plot_pde_conv_nodes_fem(problem):
     plt.savefig(problem.output_path(f'square_slit_Linf_error.pdf'))
     plt.close()
 
+
 class SquareSlit(Problem):
     def get_name(self):
         return 'square_slit'
@@ -946,6 +1010,7 @@ class SquareSlit(Problem):
         base_cmd = (
             'python3 code/poisson2d_square_slit.py -d $output_dir'
         )
+        kwargs = dict(gpu=None) if USE_GPU else {}
         self.cases = [
             Simulation(
                 root=self.input_path(f'n_{n}'),
@@ -955,13 +1020,95 @@ class SquareSlit(Problem):
                 lr=1e-3,
                 tol=1e-4,
                 activation='softplus',
-                gpu=None
+                **kwargs
             )
             for n in (25, 50, 100, 200, 500)
         ]
 
     def run(self):
+        self.make_output_dir()
         _plot_pde_conv_nodes_fem(self)
+        self._plot_solution_nodes()
+
+    def _plot_solution_nodes(self):
+        case = self.cases[3]
+        sd = np.load(case.input_path('results.npz'))
+        state = torch.load(case.input_path('model.pt'))
+        vtu_fname = os.path.join('code', 'fem', 'poisson_solution000000.vtu')
+        fname = self.output_path('solution.png')
+        f = _mlab_figure()
+        s = plot_ug_solution(vtu_fname, sd['u'])
+        cb = mlab.colorbar(s, title='u')
+        mlab.axes(s, xlabel='x', ylabel='y', y_axis_visibility=False)
+        mlab.move(up=-0.25)
+        mlab.savefig(fname)
+        fname = self.output_path('sol_centers.png')
+        s.actor.property.opacity = 0.4
+        p, p1 = _plot_mlab_nodes(state)
+        cb.visible = False
+        s.scene.z_plus_view()
+        mlab.move(forward=0.5)
+        mlab.savefig(fname)
+        mlab.close()
+
+
+class Irregular(Problem):
+    def get_name(self):
+        return 'irregular'
+
+    def setup(self):
+        base_cmd = (
+            'python3 code/poisson2d_irreg_dom.py -d $output_dir'
+        )
+        kwargs = dict(gpu=None) if USE_GPU else {}
+        self.cases = [
+            Simulation(
+                root=self.input_path(f'irregular_domain'),
+                base_command=base_cmd,
+                lr=1e-3,
+                **kwargs
+            )
+        ]
+
+    def _plot_fem_solution(self):
+        vtu_fname = os.path.join('code', 'fem', 'poisson_irregular000000.vtu')
+        fname = self.output_path('fem_solution.png')
+        f = _mlab_figure()
+        src = mlab.pipeline.open(vtu_fname)
+        s = mlab.pipeline.surface(src, colormap='viridis')
+        cb = mlab.colorbar(s, title='u')
+        s.scene.z_plus_view()
+        mlab.savefig(fname)
+        mlab.close()
+
+    def run(self):
+        self.make_output_dir()
+        self._plot_fem_solution()
+        case = self.cases[0]
+        sd = np.load(case.input_path('results.npz'))
+        state = torch.load(case.input_path('model.pt'))
+        f = _mlab_figure()
+        x, y = sd['x'], sd['y']
+        pts = mlab.points3d(
+            x, y, -0.01*np.ones_like(y), sd['u'],
+            colormap='viridis', mode='2dcircle', scale_mode='none',
+            scale_factor=0.0125
+        )
+        pts.glyph.glyph_source.glyph_source.filled = True
+        pts.glyph.glyph_source.glyph_source.resolution = 20
+        pts.actor.property.point_size = 10
+        cb = mlab.colorbar(pts, title='u')
+        pts.scene.z_plus_view()
+        fname = self.output_path('spinn_solution.png')
+        mlab.savefig(fname)
+        fname = self.output_path('sol_centers.png')
+        pts.actor.property.opacity = 0.4
+        cb.visible = False
+        p, p1 = _plot_mlab_nodes(state)
+        p.glyph.glyph.scale_factor = 0.01
+        mlab.move(forward=2.5)
+        mlab.savefig(fname)
+        mlab.close()
 
 
 # Irregular domain
@@ -973,14 +1120,14 @@ def plot_centers(x, y, w):
     a = plt.gca()
     circles = [
         plt.Circle((xi, yi), radius=wi, linewidth=1, fill=False,
-                   color='blue')
+                   color='blue', alpha=0.2)
         for xi, yi, wi in zip(x, y, w[:len(x)])
     ]
     c = matplotlib.collections.PatchCollection(
         circles, match_original=True
     )
     a.add_collection(c)
-    plt.scatter(x, y, marker='+')
+    plt.scatter(x, y, s=100, marker='o')
     plt.grid()
     plt.xlabel('x')
     plt.ylabel('y')
@@ -1092,7 +1239,7 @@ def plot_fd_centers(problem, models, times):
     figure()
     for t, model in zip(times, models):
         x = model['layer1.center'].numpy()
-        plt.plot(x, t*np.ones_like(x), 'o', color='black')
+        plt.scatter(x, t*np.ones_like(x), s=100, color='blue', alpha=0.7)
     plt.xlabel(r'$x$')
     plt.ylabel(r'$t$')
     plt.grid()
@@ -1129,7 +1276,7 @@ class BurgersFD(Problem):
 
     def _plot_solution(self, case, nodes, exact):
         data, models = get_results(case, [0.1, 0.3, 0.6, 1.0])
-        colors = ['black', 'blue', 'green', 'violet']
+        colors = ['violet', 'blue', 'green', 'red']
         x_ex = exact['x']
         u_ex = exact['u']
         figure()
@@ -1138,7 +1285,7 @@ class BurgersFD(Problem):
             t = i*0.1
             res = data[count]
             plt.plot(
-                res['x'], res['y'], 'o-', color='red',
+                res['x'], res['y'], 'o-', color=colors[count],
                 markevery=10, markersize=8, linewidth=4,
                 label='SPINN (t=%.1f)' % t
             )
@@ -1223,16 +1370,9 @@ class TimeVarying(Problem):
 
     def _plot_3d(self, st_case, warp_scale=0.5):
         sd = np.load(st_case.input_path('results.npz'))
-        mlab.figure(bgcolor=(1, 1, 1),
-                    fgcolor=(0, 0, 0), size=(800, 800))
-        s = mlab.surf(sd['xp'], sd['yp'], sd['up'], warp_scale=warp_scale,
-                      colormap='viridis')
-        mlab.outline(s)
-        mlab.axes(s, xlabel='x', ylabel='t', zlabel='u')
-        s.actor.property.edge_visibility = True
+        sd = dict(x=sd['xp'], y=sd['yp'], u=sd['up'], u_exact=sd['uex_p'])
         fname = self.output_path('st_sol.png')
-        mlab.savefig(fname)
-        mlab.close()
+        plot_3d_solution(sd, fname, warp_scale)
 
     def _plot_centers(self, st_case):
         pth = Path(st_case.input_path('model.pt'))
@@ -1333,6 +1473,7 @@ class Advection(TimeVarying):
                 root=self.input_path(f'st_n40'),
                 base_command=base_cmd,
                 nodes=40, samples=800,
+                duration=1.0,
                 n_train=5000,
                 lr=1e-3,
                 activation='gaussian',
@@ -1351,6 +1492,13 @@ class Advection(TimeVarying):
         plt.savefig(fname)
         plt.close()
 
+    def _plot_solution_nodes(self, case):
+        sd = np.load(case.input_path('results.npz'))
+        state = torch.load(case.input_path('model.pt'))
+        sdata = dict(x=sd['xp'], y=sd['yp'], u=sd['up'])
+        fname = self.output_path('sol_centers.png')
+        plot_solution_nodes(sdata, state, fname)
+
     def run(self):
         self.make_output_dir()
         case = self.fd_cases[0]
@@ -1359,6 +1507,7 @@ class Advection(TimeVarying):
         self._plot_solution(case, st_case, times)
         self._plot_3d(st_case, warp_scale=1.0)
         self._plot_centers(st_case)
+        self._plot_solution_nodes(st_case)
 
 
 if __name__ == '__main__':
@@ -1372,6 +1521,7 @@ if __name__ == '__main__':
         Poisson2DSineConv,
         Poisson2DSineNodes,
         SquareSlit,
+        Irregular,
         Advection,
         BurgersFD,
         Heat,

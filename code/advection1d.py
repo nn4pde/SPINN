@@ -74,13 +74,13 @@ class MyPlotter(Plotter2D):
         modelfname = os.path.join(dirname, 'model.pt')
         torch.save(nn.state_dict(), modelfname)
         rfile = os.path.join(dirname, 'results.npz')
+        xp, yp, up = self.get_plot_data()
+        uex_p = self.pde.exact(xp, yp)
         x, t = np.mgrid[-1:1:200j, 0:1:11j]
         xt, tt = tensor(x.ravel()), tensor(t.ravel())
         u = nn(xt, tt).detach().cpu().numpy()
         u.shape = x.shape
         u_exact = self.pde.exact(x, t)
-        xp, yp, up = self.get_plot_data()
-        uex_p = self.pde.exact(xp, yp)
         np.savez(rfile, x=x, t=t, u=u, u_exact=u_exact,
                  xp=xp, yp=yp, up=up, uex_p=uex_p)
 
