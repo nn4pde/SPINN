@@ -262,6 +262,7 @@ def _plot_ode_conv(problem, n_nodes, pname='ode',
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_1$ error')
     plt.legend()
+    plt.grid()
     plt.tight_layout()
     plt.savefig(problem.output_path(
         f'{pname}_L1_error_n_{n_nodes}.pdf'
@@ -279,6 +280,7 @@ def _plot_ode_conv(problem, n_nodes, pname='ode',
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_2$ error')
     plt.legend()
+    plt.grid()
     plt.tight_layout()
     plt.savefig(problem.output_path(
         f'{pname}_L2_error_n_{n_nodes}.pdf'
@@ -296,6 +298,7 @@ def _plot_ode_conv(problem, n_nodes, pname='ode',
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_{\infty}$ error')
     plt.legend()
+    plt.grid()
     plt.tight_layout()
     plt.savefig(problem.output_path(
         f'{pname}_Linf_error_n_{n_nodes}.pdf'
@@ -427,6 +430,7 @@ def _plot_ode_conv_sampling(problem, n_nodes, pname='ode',
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_1$ error')
     plt.legend()
+    plt.grid()
     plt.tight_layout()
     plt.savefig(problem.output_path(
         f'{pname}_L1_error_n_{n_nodes}_f.pdf'
@@ -444,6 +448,7 @@ def _plot_ode_conv_sampling(problem, n_nodes, pname='ode',
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_2$ error')
     plt.legend()
+    plt.grid()
     plt.tight_layout()
     plt.savefig(problem.output_path(
         f'{pname}_L2_error_n_{n_nodes}_f.pdf'
@@ -461,6 +466,7 @@ def _plot_ode_conv_sampling(problem, n_nodes, pname='ode',
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_{\infty}$ error')
     plt.legend()
+    plt.grid()
     plt.tight_layout()
     plt.savefig(problem.output_path(
         f'{pname}_Linf_error_n_{n_nodes}_f.pdf'
@@ -468,9 +474,9 @@ def _plot_ode_conv_sampling(problem, n_nodes, pname='ode',
     plt.close()
 
 
-class ODE2Conv6(Problem):
+class ODE2Conv5(Problem):
     def get_name(self):
-        return 'ode2_conv_6'
+        return 'ode2_conv_5'
 
     def setup(self):
         self.n = 5
@@ -676,6 +682,7 @@ class ODE3Comp(Problem):
         case_every=[1, 3, 2]
 
         plt.figure(figsize=(12,12))
+        plt.xlim(-0.1, 1.3)
 
         for case in self.cases:
             res = np.load(case.input_path('results.npz'))
@@ -777,6 +784,7 @@ def _plot_pde_conv(problem, n_nodes):
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_1$ error')
     plt.legend()
+    plt.grid()
     plt.tight_layout()
     plt.savefig(problem.output_path(f'sine2d_L1_error_n_{n_nodes}.pdf'))
     plt.close()
@@ -792,6 +800,7 @@ def _plot_pde_conv(problem, n_nodes):
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_2$ error')
     plt.legend()
+    plt.grid()
     plt.tight_layout()
     plt.savefig(problem.output_path(f'sine2d_L2_error_n_{n_nodes}.pdf'))
     plt.close()
@@ -807,6 +816,7 @@ def _plot_pde_conv(problem, n_nodes):
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_{\infty}$ error')
     plt.legend()
+    plt.grid()
     plt.tight_layout()
     plt.savefig(problem.output_path(f'sine2d_Linf_error_n_{n_nodes}.pdf'))
     plt.close()
@@ -887,6 +897,7 @@ def _plot_pde_conv_nodes(problem):
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_1$ error')
     plt.legend()
+    plt.grid()
     plt.tight_layout()
     plt.savefig(problem.output_path(f'sine2d_L1_error.pdf'))
     plt.close()
@@ -902,6 +913,7 @@ def _plot_pde_conv_nodes(problem):
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_2$ error')
     plt.legend()
+    plt.grid()
     plt.tight_layout()
     plt.savefig(problem.output_path(f'sine2d_L2_error.pdf'))
     plt.close()
@@ -917,6 +929,7 @@ def _plot_pde_conv_nodes(problem):
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_{\infty}$ error')
     plt.legend()
+    plt.grid()
     plt.tight_layout()
     plt.savefig(problem.output_path(f'sine2d_Linf_error.pdf'))
     plt.close()
@@ -975,6 +988,7 @@ def _plot_pde_conv_nodes_fem(problem):
     plt.plot(n_nodes, L1s, 'b-',linewidth=6)
     plt.xlabel('Number of nodes')
     plt.ylabel(r'$L_1$ error')
+    plt.grid()
     plt.tight_layout()
     plt.savefig(problem.output_path(f'square_slit_L1_error.pdf'))
     plt.close()
@@ -986,6 +1000,7 @@ def _plot_pde_conv_nodes_fem(problem):
     plt.plot(n_nodes, L2s, 'b-',linewidth=6)
     plt.xlabel('Number of nodes')
     plt.ylabel(r'$L_2$ error')
+    plt.grid()
     plt.tight_layout()
     plt.savefig(problem.output_path(f'square_slit_L2_error.pdf'))
     plt.close()
@@ -997,6 +1012,7 @@ def _plot_pde_conv_nodes_fem(problem):
     plt.plot(n_nodes, Linfs, 'b-',linewidth=6)
     plt.xlabel('Number of nodes')
     plt.ylabel(r'$L_{\infty}$ error')
+    plt.grid()
     plt.tight_layout()
     plt.savefig(problem.output_path(f'square_slit_Linf_error.pdf'))
     plt.close()
@@ -1514,7 +1530,7 @@ if __name__ == '__main__':
     PROBLEMS = [
         ODE1, ODE2, ODE3,
         ODE3Conv1, ODE3Conv3,
-        ODE2Conv6,
+        ODE2Conv5,
         ODE1Var, ODE3Var,
         ODE1Fourier, ODE3Fourier,
         ODE3Comp,
