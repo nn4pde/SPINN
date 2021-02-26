@@ -8,8 +8,9 @@ arXiv.
 
 ## Installation
 
-This requires pysph to be setup along with automan. See the
-`requirements.txt`. To setup perform the following:
+Running the code in this repository requires a few pre-requisites to be set
+up. The Python packages required are in the `requirements.txt`. Here are some
+instructions to help you set these up:
 
 0. Setup a suitable Python distribution, using [conda](https://conda.io) or a
    [virtualenv](https://virtualenv.pypa.io/).
