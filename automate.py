@@ -670,7 +670,7 @@ class ODE3Comp(Problem):
 
     def run(self):
         self.make_output_dir()
-        
+
         left_bdy = True
         right_bdy = True
 
@@ -696,7 +696,7 @@ class ODE3Comp(Problem):
                 )
 
             plt.plot(
-                res['x'], res['y'], 
+                res['x'], res['y'],
                 case_style[case_count],
                 color=case_color[case_count],
                 markersize=10, linewidth=3,
@@ -731,7 +731,7 @@ class ODE3Comp(Problem):
                     'cX', markersize=10, label='Var-SPINN nodes'
                 )
 
-            case_count += 1 
+            case_count += 1
 
         plt.tight_layout()
         plt.savefig(self.output_path(
@@ -1470,7 +1470,7 @@ class Advection(TimeVarying):
             Simulation(
                 root=self.input_path(f'fd_n10'),
                 base_command=base_cmd,
-                nodes=10, samples=100,
+                nodes=15, samples=100,
                 n_train=5000,
                 lr=5e-3,
                 tol=1e-6,
