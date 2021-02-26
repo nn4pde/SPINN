@@ -1,7 +1,7 @@
 # Sparse Physics-based and Interpretable Neural Networks
 
 This repository contains the code and manuscript for research done on
-Sparse Physics-based and Interpretable Neural Networks.
+Sparse Physics-based and Interpretable Neural Networks. The [preprint](https://arxiv.org/abs/2102.13037) of this work is available on arxiv.
 
 
 ## Installation
@@ -49,8 +49,8 @@ the following:
 
 ```
 $ cd manuscript
-$ pdflatex paper.tex
-$ bibtex paper
-$ pdflatex paper.tex
-$ pdflatex paper.tex
+$ pdflatex spinn_manuscript.tex
+$ bibtex spinn_manuscript
+$ pdflatex spinn_manuscript.tex
+$ pdflatex spinn_manuscript.tex
 ```
