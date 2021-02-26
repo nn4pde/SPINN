@@ -1,7 +1,9 @@
 # Sparse Physics-based and Interpretable Neural Networks
 
-This repository contains the code and manuscript for research done on
-Sparse Physics-based and Interpretable Neural Networks. The [preprint](https://arxiv.org/abs/2102.13037) of this work is available on arxiv.
+This repository contains the code and manuscript for research done on Sparse
+Physics-based and Interpretable Neural Networks. The
+[preprint](https://arxiv.org/abs/2102.13037) of this work is available on
+arXiv.
 
 
 ## Installation
@@ -39,18 +41,21 @@ To use the automation code, do the following::
     $ ./automate.py
 
 By default the simulation outputs are in the ``outputs`` directory and the
-final plots for the paper are in ``manuscript/figures``.
+final plots for the paper are in ``manuscript/figures`**.
 
 
 ## Building the paper
 
-The manuscript is written with LaTeX and if you have that installed you may do
-the following:
+**WARNING***: while all the plots shown in the the main text of the pre-print
+listed above are fully automated, there are a few files in the supplement that
+are not yet fully integrated and we will be fixing this in a few days. So if
+you build the paper currently you will see some errors.
+
+Once you have generated all the figures from the automation you can easily
+compile the manuscript. The manuscript is written with LaTeX and if you have
+that installed you may do the following:
 
 ```
 $ cd manuscript
-$ pdflatex spinn_manuscript.tex
-$ bibtex spinn_manuscript
-$ pdflatex spinn_manuscript.tex
-$ pdflatex spinn_manuscript.tex
+$ latexmk spinn_manuscript.tex -pdf
 ```
