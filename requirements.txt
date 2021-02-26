@@ -2,3 +2,7 @@ torch
 matplotlib
 automan
 numpy
+ipython
+jupyter
+vtk
+mayavi

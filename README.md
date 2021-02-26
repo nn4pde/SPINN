@@ -18,36 +18,96 @@ instructions to help you set these up:
 1. Clone this repository:
 ```
     $ git clone https://github.com/nn4pde/SPINN.git
+    $ cd SPINN
 ```
 
-2. Run the following from your Python environment:
+
+2. If you use conda, run the following from your Python environment:
 ```
-    $ cd SPINN
+    $ conda env create -f environment.yml
+    $ conda activate spinn
+```
+
+3. If you use a virtualenv or some other Python distribution and wish to use `pip`:
+```
     $ pip install -r requirements.txt
 ```
+
+Once you install the packages you should hopefully be able to run the
+examples. The examples all support live-plotting of the results.
+[Matplotlib](https://matplotlib.org) is required for the live plotting of any
+of the 1D problems and [Mayavi](https://docs.enthought.com/mayavi/mayavi/) is
+needed for any 2D/3D problems. These are already specified in the
+`requirements.txt` and `environments.yml` files.
+
+
+## Running the code
+
+All the problems discussed in the paper are available in the `code`
+subdirectory. The supplementary text in the paper discusses the design of the
+code at a very high level.  You can run any of the problems as follows:
+```
+  $ cd code
+  $ python ode3.py -h
+```
+
+And this will provide a variety of help options that you can use. You can see
+the results live by doing:
+```
+  $ python ode3.py --plot
+```
+These require matlplotlib.
+
+The 2D problems also feature live plotting with Mayavi if it is installed, for
+example:
+```
+  $ python advection1d.py --plot
+```
+You should see the solution as well as the computational nodes.  Where
+applicable you can see an exact solution as a wireframe.
 
 
 ## Generating the results
 
-The paper and the results are all automated using the
+All the results shown in the paper are automated using the
 [automan](https://automan.readthedocs.io) package which should already be
 installed as part of the above installation. This will perform all the
 required simulations (this can take a while) and also generate all the plots
 for the manuscript.
 
-To use the automation code, do the following::
+To learn how to use the automation, do this:
+```
+    $ python automate.py -h
+```
 
-    $ python automate.py
-    # or
-    $ ./automate.py
+By default the simulation outputs are in the `outputs` directory and the
+final plots for the paper are in `manuscript/figures`.
 
-By default the simulation outputs are in the ``outputs`` directory and the
-final plots for the paper are in ``manuscript/figures`**.
+To generate all the figures in one go, run the following (this will take a while):
+```
+    $ python automate.py -h
+```
+
+If you wish to only run a particular set of problems and see those results you
+can do the following:
+```
+   $ python automate.py PROBLEM
+```
+
+where `PROBLEM` can be any of the demonstrated problems.  For example:
+
+```
+  $ python automate.py ode1 heat cavity
+```
+
+Will only run those three problems. Please see the help output (`-h`) and look
+at the code for more details.
+
 
 
 ## Building the paper
 
-**WARNING***: while all the plots shown in the the main text of the pre-print
+**WARNING**: while all the plots shown in the the main text of the pre-print
 listed above are fully automated, there are a few files in the supplement that
 are not yet fully integrated and we will be fixing this in a few days. So if
 you build the paper currently you will see some errors.
