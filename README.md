@@ -21,7 +21,6 @@ instructions to help you set these up:
     $ cd SPINN
 ```
 
-
 2. If you use conda, run the following from your Python environment:
 ```
     $ conda env create -f environment.yml
@@ -66,6 +65,12 @@ example:
 You should see the solution as well as the computational nodes.  Where
 applicable you can see an exact solution as a wireframe.
 
+If you have a GPU and it is configured to work with
+[PyTorch](https://pytorch.org/), you can use it like so:
+```
+  $ python poisson2d_irreg_dom.py --gpu
+```
+
 
 ## Generating the results
 
@@ -85,7 +90,7 @@ final plots for the paper are in `manuscript/figures`.
 
 To generate all the figures in one go, run the following (this will take a while):
 ```
-    $ python automate.py -h
+    $ python automate.py
 ```
 
 If you wish to only run a particular set of problems and see those results you
@@ -102,6 +107,10 @@ where `PROBLEM` can be any of the demonstrated problems.  For example:
 
 Will only run those three problems. Please see the help output (`-h`) and look
 at the code for more details.
+
+By default we do not need to use a GPU for the automation but if you have one,
+you can edit the `automate.py` and set `USE_GPU = True` to make use of your
+GPU where possible.
 
 
 
