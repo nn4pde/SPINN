@@ -116,11 +116,6 @@ GPU where possible.
 
 ## Building the paper
 
-**WARNING**: while all the plots shown in the the main text of the pre-print
-listed above are fully automated, there are a few files in the supplement that
-are not yet fully integrated and we will be fixing this in a few days. So if
-you build the paper currently you will see some errors.
-
 Once you have generated all the figures from the automation you can easily
 compile the manuscript. The manuscript is written with LaTeX and if you have
 that installed you may do the following:
