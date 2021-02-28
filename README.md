@@ -1,7 +1,7 @@
-# Sparse Physics-based and Interpretable Neural Networks
+# Sparse Physics-based and Interpretable Neural Networks for PDEs
 
 This repository contains the code and manuscript for research done on Sparse
-Physics-based and Interpretable Neural Networks. The
+Physics-based and Interpretable Neural Networks for PDEs. The
 [preprint](https://arxiv.org/abs/2102.13037) of this work is available on
 arXiv.
 

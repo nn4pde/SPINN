@@ -67,7 +67,7 @@
 
 \begin{quote}
 \section*{Abstract}
-We introduce a class of Sparse, Physics-based, and Interpretable Neural Networks (SPINN) for solving ordinary and partial differential equations. By reinterpreting a traditional meshless representation of solutions of PDEs as a special sparse deep neural network, we develop a class of sparse neural network architectures that are interpretable. The SPINN model we propose here serves as a seamless bridge between two extreme modeling tools for PDEs, dense neural network based methods and traditional mesh-based and mesh-free numerical methods, thereby providing a novel means to develop a new class of hybrid algorithms that build on the best of both these viewpoints. A unique feature of the SPINN model we propose that distinguishes it from other neural network based approximations proposed earlier is that our method is both fully interpretable and sparse in the sense that it has much fewer connections than a dense neural network of the same size. Further, we demonstrate that Fourier series representations can be expressed as a special class of SPINN and propose generalized neural network analogues of Fourier representations. We illustrate the utility of the proposed method with a variety of examples involving ordinary differential equations, elliptic, parabolic, hyperbolic and nonlinear partial differential equations, and an example in fluid dynamics. 
+We introduce a class of Sparse, Physics-based, and Interpretable Neural Networks (SPINN) for solving ordinary and partial differential equations. By reinterpreting a traditional meshless representation of solutions of PDEs as a special sparse deep neural network, we develop a class of sparse neural network architectures that are interpretable. The SPINN model we propose here serves as a seamless bridge between two extreme modeling tools for PDEs, dense neural network based methods and traditional mesh-based and mesh-free numerical methods, thereby providing a novel means to develop a new class of hybrid algorithms that build on the best of both these viewpoints. A unique feature of the SPINN model we propose that distinguishes it from other neural network based approximations proposed earlier is that our method is both fully interpretable and sparse in the sense that it has much fewer connections than a dense neural network of the same size. Further, we demonstrate that Fourier series representations can be expressed as a special class of SPINN and propose generalized neural network analogues of Fourier representations. We illustrate the utility of the proposed method with a variety of examples involving ordinary differential equations, elliptic, parabolic, hyperbolic and nonlinear partial differential equations, and an example in fluid dynamics.
 \end{quote}
 
 
@@ -93,7 +93,7 @@ u(x) = \left(\sum_{j=1}^N \varphi\left(\frac{\lVert x - X_j \rVert}{h_j}\right)\
 \end{equation}
 It is noted that the partition of unity meshless representation \eqref{eq:pde_meshless_PoU} satisfies the important property that it can represent any constant function on $\Omega$ exactly.
 
-\textbf{Meshless approximation reinterpreted as a sparse DNN.} The key idea behind SPINNs is the fact that meshless approximations like \eqref{eq:pde_meshless_approx} and \eqref{eq:pde_meshless_PoU} can be \emph{exactly} represented as specially structured sparse DNN. We first discuss how the meshless approximation \eqref{eq:pde_meshless_approx} can be written as a sparse DNN; the corresponding sparse DNN representation for the partition of unity approximation \eqref{eq:pde_meshless_PoU} is constructed analogously. The meshless approximation \eqref{eq:pde_meshless_approx} can be thought of as a DNN with an architecture as shown in Fig.~\ref{fig:meshless_nn_repr}.  We first transform the input  $x \in \Omega$ to the vector $(\lVert x - X_i\rVert/h_i)_{i=1}^N$ via hidden layers which we call the \emph{mesh encoding layer}, shown in blue in Fig.~\ref{fig:meshless_nn_repr}. In more detail, the mesh encoding layer first transforms the input $x \in \Omega$ to a hidden layer with $Nd$ neurons that have input weights 
+\textbf{Meshless approximation reinterpreted as a sparse DNN.} The key idea behind SPINNs is the fact that meshless approximations like \eqref{eq:pde_meshless_approx} and \eqref{eq:pde_meshless_PoU} can be \emph{exactly} represented as specially structured sparse DNN. We first discuss how the meshless approximation \eqref{eq:pde_meshless_approx} can be written as a sparse DNN; the corresponding sparse DNN representation for the partition of unity approximation \eqref{eq:pde_meshless_PoU} is constructed analogously. The meshless approximation \eqref{eq:pde_meshless_approx} can be thought of as a DNN with an architecture as shown in Fig.~\ref{fig:meshless_nn_repr}.  We first transform the input  $x \in \Omega$ to the vector $(\lVert x - X_i\rVert/h_i)_{i=1}^N$ via hidden layers which we call the \emph{mesh encoding layer}, shown in blue in Fig.~\ref{fig:meshless_nn_repr}. In more detail, the mesh encoding layer first transforms the input $x \in \Omega$ to a hidden layer with $Nd$ neurons that have input weights
 \begin{displaymath}
 \left(\underbrace{\frac{1}{h_1}, \ldots, \frac{1}{h_1}}_{\text{$d$ terms}}, \underbrace{\frac{1}{h_2}, \ldots, \frac{1}{h_2}}_{\text{$d$ terms}}, \ldots, \underbrace{\frac{1}{h_N}, \ldots, \frac{1}{h_N}}_{\text{$d$ terms}} \right),
 \end{displaymath}
@@ -141,7 +141,7 @@ This vector is then passed to the \emph{kernel layer}, shown in brown in Fig.~\r
 \label{fig:spinn_architecture}
 \end{figure}
 
-\textbf{SPINN architecture.} The foregoing discussion naturally motivates the introduction of generalized meshless approximations where the kernel is represented using a DNN. For instance, a partition of unity meshless approximation of the form \eqref{eq:pde_meshless_PoU} with the kernel replaced by a DNN is shown in Figure~\ref{fig:meshless_nn_detailed}. It can be seen that the mesh encoding layers, shown in blue in Figure~\ref{fig:meshless_nn_detailed}, are identical to that described earlier in the context of the DNN equivalent of \eqref{eq:pde_meshless_approx}. The primary difference is that instead of using an RBF kernel as the activation function in the kernel layer, a standard DNN with any differentiable activation function, shown in brown in Figure~\ref{fig:meshless_nn_detailed}, is used as the kernel; we call this the \emph{kernel network} in the sequel. It is worth pointing out that the \emph{same} kernel network is used for each of the outputs of the mesh encoding layer, in conformity with the meshless ansatz \eqref{eq:pde_meshless_PoU}. We note that the resulting SPINN architecture enjoys the same advantages of the special SPINN architecture introduced earlier: the SPINN architecture proposed here is thus more efficient than conventional DNN based methods such as Deep Ritz \cite{EYu2018}, PINN \cite{RPK2019}, etc. Note also that the number of neurons in the mesh encoding layer is exactly the same as the number of nodes used in the meshless discretization. We thus have a physically inspired means to fix the size of the hidden layers in SPINN, unlike other DNN based approaches like PINN where the size of the hidden layers is arbitrary.  Further, except for the parameters of the kernel network, the remaining learnable parameters of the network are fully interpretable. In fact, once the SPINN model is trained, it is straightforward to extract the corresponding meshless ansatz. The parameters of the kernel network do not require to be interpreted since the kernel network itself can be thought of as a generalized RBF kernel.  
+\textbf{SPINN architecture.} The foregoing discussion naturally motivates the introduction of generalized meshless approximations where the kernel is represented using a DNN. For instance, a partition of unity meshless approximation of the form \eqref{eq:pde_meshless_PoU} with the kernel replaced by a DNN is shown in Figure~\ref{fig:meshless_nn_detailed}. It can be seen that the mesh encoding layers, shown in blue in Figure~\ref{fig:meshless_nn_detailed}, are identical to that described earlier in the context of the DNN equivalent of \eqref{eq:pde_meshless_approx}. The primary difference is that instead of using an RBF kernel as the activation function in the kernel layer, a standard DNN with any differentiable activation function, shown in brown in Figure~\ref{fig:meshless_nn_detailed}, is used as the kernel; we call this the \emph{kernel network} in the sequel. It is worth pointing out that the \emph{same} kernel network is used for each of the outputs of the mesh encoding layer, in conformity with the meshless ansatz \eqref{eq:pde_meshless_PoU}. We note that the resulting SPINN architecture enjoys the same advantages of the special SPINN architecture introduced earlier: the SPINN architecture proposed here is thus more efficient than conventional DNN based methods such as Deep Ritz \cite{EYu2018}, PINN \cite{RPK2019}, etc. Note also that the number of neurons in the mesh encoding layer is exactly the same as the number of nodes used in the meshless discretization. We thus have a physically inspired means to fix the size of the hidden layers in SPINN, unlike other DNN based approaches like PINN where the size of the hidden layers is arbitrary.  Further, except for the parameters of the kernel network, the remaining learnable parameters of the network are fully interpretable. In fact, once the SPINN model is trained, it is straightforward to extract the corresponding meshless ansatz. The parameters of the kernel network do not require to be interpreted since the kernel network itself can be thought of as a generalized RBF kernel.
 
 The restriction that the kernel is a radial basis function can be easily removed. It is well known \cite{HLXZ2020} that one-dimensional piecewise linear finite element basis functions can be written exactly in terms of the ReLU basis functions; details are provided in Appendix~\ref{app:relu_fem_1d}. However, ReLU functions are not differentiable, and this can pose problems for their use in ODEs and PDEs of order two or higher. Motivated by the connection between RELU activation functions and hat functions, we propose a new class of basis functions that are infinitely differentiable. We note first that the softplus function
 \begin{equation} \label{eq:softplus}
@@ -161,15 +161,15 @@ We emphasize that the higher dimensional softplus hat kernel functions \eqref{eq
 
 \textbf{Loss definition.} With this choice of architecture, solving the PDE, $\mathcal{N}(x, u, \nabla u, \ldots) = 0$, is easily accomplished using a collocation technique similar to the one used in PINNs \cite{RPK2019}. We also note in passing that for PDEs that are obtained as the Euler-Lagrange equations of a known functional, the loss function can be formulated using quadratures of the integral of the functional along with penalty terms to enforce boundary conditions, as is carried out in the Deep Ritz method \cite{EYu2018}.
 
-\textbf{Time dependent PDEs.} There are two different approaches for time dependent PDEs using SPINN. The first employs a space-time grid of dimension $d + 1$ and uses exactly the same ideas presented above to solve a time dependent PDE. Alternatively, a hybrid finite difference and SPINN method, whihc we call FD-SPINN, can be employed which performs time marching using conventional finite difference methods and performs spatial discretization at each time step using the SPINN architecture. It is worth mentioning that both explicit and implicit finite difference schemes are subsumed in FD-SPINN. Both the space-time and the FD-SPINN methods are illustrated later on. 
+\textbf{Time dependent PDEs.} There are two different approaches for time dependent PDEs using SPINN. The first employs a space-time grid of dimension $d + 1$ and uses exactly the same ideas presented above to solve a time dependent PDE. Alternatively, a hybrid finite difference and SPINN method, whihc we call FD-SPINN, can be employed which performs time marching using conventional finite difference methods and performs spatial discretization at each time step using the SPINN architecture. It is worth mentioning that both explicit and implicit finite difference schemes are subsumed in FD-SPINN. Both the space-time and the FD-SPINN methods are illustrated later on.
 
 
-\textbf{Fourier-SPINN.} Another generalization that is naturally suggested by the SPINN architecture is a DNN analogue of familiar decompositions like the Fourier and wavelet transforms. To make this precise, consider the Fourier expansion of a function $u:[a,b] \to \mathbb{R}$, namely $u(x) = a_0 + \sum_{k=1}^{\infty} a_k \cos k\omega x + \sum_{k=1}^{\infty} b_k \sin k\omega x$, where $\omega = 2\pi/(b - a)$. It is straightforward to reinterpret this as a neural network with one hidden layer that has the sinusoidal functions as the activation functions of the neurons. The weights and biases of this neural network are fully interpretable as in the case of the meshless approximation discussed earlier; more details are presented in Appendix~\ref{app:fourier_spinn}. We note in passing that wavelet transforms could also be represented using SPINN. As a natural generalization one could replace the sinusoidal functions by a DNN thereby providing a neural network generalization of the Fourier transform.  
+\textbf{Fourier-SPINN.} Another generalization that is naturally suggested by the SPINN architecture is a DNN analogue of familiar decompositions like the Fourier and wavelet transforms. To make this precise, consider the Fourier expansion of a function $u:[a,b] \to \mathbb{R}$, namely $u(x) = a_0 + \sum_{k=1}^{\infty} a_k \cos k\omega x + \sum_{k=1}^{\infty} b_k \sin k\omega x$, where $\omega = 2\pi/(b - a)$. It is straightforward to reinterpret this as a neural network with one hidden layer that has the sinusoidal functions as the activation functions of the neurons. The weights and biases of this neural network are fully interpretable as in the case of the meshless approximation discussed earlier; more details are presented in Appendix~\ref{app:fourier_spinn}. We note in passing that wavelet transforms could also be represented using SPINN. As a natural generalization one could replace the sinusoidal functions by a DNN thereby providing a neural network generalization of the Fourier transform.
 
 \section*{Results}
 We now present solutions of a variety of ordinary and partial differential equations using SPINN. We implement the SPINN architecture using PyTorch~\cite{pytorch}, and the code is available at \url{https://github.com/nn4pde/SPINN}. All our results are automated using \code{automan}~\cite{automan:2018} for easy reproducibility.
 
-\textbf{Ordinary differential equations.} To validate the SPINN method, we first consider ordinary differential equations (ODEs) with different boundary conditions. Sample results are shown in Figure~\ref{fig:spinn_ode} for ODEs with both Dirichlet and Neumann boundary conditions; more examples and details of the various simulations are provided in Appendix~\ref{app:ode}. In Figure~\ref{fig:ode3_gaussian_n_3_comp} we present solutions of the ODE $u''(x) + x(\exp (-(x - (1/3))^2/K) - \exp (-4/9K)) = 0$, $x \in (0,1)$, with zero Dirichlet boundary conditions at $x=0$ and $x=1$ using three different SPINN variants - SPINN with Gaussian kernel and strong form collocation as loss function, variational version of SPINN with Gaussian kernel minimizing the loss functional $I(u) = \int_0^1 (1/2)(u'(x))^2 - f(x)\, dx$, and Fourier-SPINN. The positions of the nodes learnt by the SPINN algorithm are also shown. It is worth pointing out that the nodes adapt to the solution as part of the training process. For the rest of the plots in Figure~\ref{fig:spinn_ode}, strong form based collocation is used. The convergence of SPINN solutions with a fixed number of nodes but different kernels, as a function of the iteration number, is shown in Figure~\ref{fig:ode3_Linf_n_3}. Gaussian, softplus hat and a DNN with two hidden layers of 5 neurons each are used as the kernels. For all the kernels, it is observed that the error plot shows two distinct regimes. Examining the intermediate solutions during the iteration reveals that the first phase in Figure~\ref{fig:ode3_Linf_n_3} characterized by high loss and slow convergence correlates with the SPINN model minimizing the interior loss. The second phase in Figure~\ref{fig:ode3_Linf_n_3} characterized by a rapid drop in the error correlates with the SPINN model learning the boundary conditions of the ODE. It is further seen that all three kernels perform well, though the Gaussian kernel performs well for this ODE. In obtaining the results in Figure~\ref{fig:ode3_gaussian_n_3_comp} and Figure~\ref{fig:ode3_Linf_n_3}, full sampling is used. 
+\textbf{Ordinary differential equations.} To validate the SPINN method, we first consider ordinary differential equations (ODEs) with different boundary conditions. Sample results are shown in Figure~\ref{fig:spinn_ode} for ODEs with both Dirichlet and Neumann boundary conditions; more examples and details of the various simulations are provided in Appendix~\ref{app:ode}. In Figure~\ref{fig:ode3_gaussian_n_3_comp} we present solutions of the ODE $u''(x) + x(\exp (-(x - (1/3))^2/K) - \exp (-4/9K)) = 0$, $x \in (0,1)$, with zero Dirichlet boundary conditions at $x=0$ and $x=1$ using three different SPINN variants - SPINN with Gaussian kernel and strong form collocation as loss function, variational version of SPINN with Gaussian kernel minimizing the loss functional $I(u) = \int_0^1 (1/2)(u'(x))^2 - f(x)\, dx$, and Fourier-SPINN. The positions of the nodes learnt by the SPINN algorithm are also shown. It is worth pointing out that the nodes adapt to the solution as part of the training process. For the rest of the plots in Figure~\ref{fig:spinn_ode}, strong form based collocation is used. The convergence of SPINN solutions with a fixed number of nodes but different kernels, as a function of the iteration number, is shown in Figure~\ref{fig:ode3_Linf_n_3}. Gaussian, softplus hat and a DNN with two hidden layers of 5 neurons each are used as the kernels. For all the kernels, it is observed that the error plot shows two distinct regimes. Examining the intermediate solutions during the iteration reveals that the first phase in Figure~\ref{fig:ode3_Linf_n_3} characterized by high loss and slow convergence correlates with the SPINN model minimizing the interior loss. The second phase in Figure~\ref{fig:ode3_Linf_n_3} characterized by a rapid drop in the error correlates with the SPINN model learning the boundary conditions of the ODE. It is further seen that all three kernels perform well, though the Gaussian kernel performs well for this ODE. In obtaining the results in Figure~\ref{fig:ode3_gaussian_n_3_comp} and Figure~\ref{fig:ode3_Linf_n_3}, full sampling is used.
 
 We present next a solution of the ODE $u''(x) + \pi^2 u(x) = \pi \sin \pi x$, $x \in (0,1)$, with $u(0) = 0$ and $u'(1) = 1/2$. To handle the Neumann boundary condition at $x=1$, no fixed node is used there and the interior nodes are free to move outside the domain to accommodate the Neumann condition. This is indeed seen in the SPINN solution shown in Figure~\ref{fig:ode2_n_5_f_0p2} where two of the five interior nodes have moved outside the domain $(0,1)$ during the training. When computing the loss, using full sampling does not work in this case as the SPINN algorithm gets trapped in a metastable state which corresponds to an incorrect solution. Random sampling of the interior points, however, provides a convenient means for the SPINN algorithm to escape this metastable state and learn the correct solution. We illustrate the effect of sampling ratio $f$ on the convergence of the SPINN algorithm in Figure~\ref{fig:ode2_n_5_Linf}, thereby demonstrating the significant effect that random sampling has on the convergence of the algorithm for this ODE.
 
@@ -185,46 +185,46 @@ We present next a solution of the ODE $u''(x) + \pi^2 u(x) = \pi \sin \pi x$, $x
 \centering
 \includegraphics[width=\textwidth]{figures/ode3_conv_3/ode3_Linf_error_n_3.pdf}
 \caption{$L_{\infty}$ error for different kernels.}
-\label{fig:ode3_Linf_n_3}  
+\label{fig:ode3_Linf_n_3}
 \end{subfigure}
 
 \begin{subfigure}{0.5\textwidth}
 \centering
-\includegraphics[width=\textwidth]{figures/ode2_conv_5/ode2_n_5_f_0.2.pdf}
+\includegraphics[width=\textwidth]{{figures/ode2_conv_5/ode2_n_5_f_0.2}.pdf}
 \caption{ODE with Neumann boundary condition and random sampling.}
-\label{fig:ode2_n_5_f_0p2} 
+\label{fig:ode2_n_5_f_0p2}
 \end{subfigure}
 ~
 \begin{subfigure}{0.5\textwidth}
 \centering
 \includegraphics[width=\textwidth]{figures/ode2_conv_5/ode2_Linf_error_n_5_f.pdf}
 \caption{$L_{\infty}$ error for different sampling fractions.}
-\label{fig:ode2_n_5_Linf}    
+\label{fig:ode2_n_5_Linf}
 \end{subfigure}
 \caption{Solution of ODEs with SPINN. \ref{fig:ode3_gaussian_n_3} shows the solution of the ODE $u''(x) + f(x) = 0$, $x \in (0,1)$, $u(0) = u(1) = 0$, where $f(x) = x(\exp (-(x - (1/3))^2/K) - \exp (-4/9K))$ computed using SPINN with Gaussian kernel. The positions of the nodes learnt by SPINN is shown as blue dots. The $L_{\infty}$ error associated with different choices of kernels is shown in \ref{fig:ode3_Linf_n_3}. The solution of the ODE $u''(x) + \pi^2 u(x) = \pi \sin \pi x$, $x \in (0,1)$, with $u(0) = 0$ and $u'(1) = 1/2$ is shown in \ref{fig:ode2_n_5_f_0p2}. A random sampling fraction $f=0.2$ is used in this case. The $L_{\infty}$ errors for different sampling fractions are shown in \ref{fig:ode2_n_5_Linf}.}
 \label{fig:spinn_ode}
 \end{figure}
 
 \textbf{PDEs in two dimensions.}
-We now present a few examples solving PDEs, specifically the Poisson equation in two dimensions. The first example solves the equation $\nabla^2 u(x, y) = 20\pi^2 \sin 2\pi x \, \sin 4 \pi y$ on the unit square $[0,1]\times[0,1]$ with zero Dirichlet boundary conditions. A comparison of the SPINN solution with the exact solution is shown in Figure~\ref{fig:2d_A_softplus_n_100}. The $L_{\infty}$ error as a function of the iteration number is plotted for different kernels in Figure~\ref{fig:2d_A_Linf_n_100}. The kernels chosen here are identical to those considered earlier in the one dimensional case. As before, we observe two distinct regimes in the error graph corresponding to learning the interior and learning the boundary conditions. While all three kernels provide a good solution, the softplus hat kernel performs better than the other two for this PDE. The convergence of the SPINN solution as a function of the number of interior nodes used is shown in Figure~\ref{fig:2d_A_Linf}; we observe that the error decreases with increase in the number of nodes, as expected. 
+We now present a few examples solving PDEs, specifically the Poisson equation in two dimensions. The first example solves the equation $\nabla^2 u(x, y) = 20\pi^2 \sin 2\pi x \, \sin 4 \pi y$ on the unit square $[0,1]\times[0,1]$ with zero Dirichlet boundary conditions. A comparison of the SPINN solution with the exact solution is shown in Figure~\ref{fig:2d_A_softplus_n_100}. The $L_{\infty}$ error as a function of the iteration number is plotted for different kernels in Figure~\ref{fig:2d_A_Linf_n_100}. The kernels chosen here are identical to those considered earlier in the one dimensional case. As before, we observe two distinct regimes in the error graph corresponding to learning the interior and learning the boundary conditions. While all three kernels provide a good solution, the softplus hat kernel performs better than the other two for this PDE. The convergence of the SPINN solution as a function of the number of interior nodes used is shown in Figure~\ref{fig:2d_A_Linf}; we observe that the error decreases with increase in the number of nodes, as expected.
 
-For the second example we consider $\nabla^2 u(x, y) + 1 = 0$ on the domain $[-1,1]\times[-1,1] \setminus [0,1]\times\{0\}$. The solution obtained using SPINN is shown in Figure~\ref{fig:poisson_2d_square_slit_sol}. The corresponding nodal positions are shown in Figure~\ref{fig:poisson_2d_square_slit_nodes}. It is seen that the SPINN algorithm learns the optimal position of the nodes and the size of the kernels at the nodal positions appropriately. A comparison of the error of the SPINN solution with respect to a reference finite element solution using a very fine mesh is shown in Figure~\ref{fig:poisson_2d_square_slit_convergence}. 
+For the second example we consider $\nabla^2 u(x, y) + 1 = 0$ on the domain $[-1,1]\times[-1,1] \setminus [0,1]\times\{0\}$. The solution obtained using SPINN is shown in Figure~\ref{fig:poisson_2d_square_slit_sol}. The corresponding nodal positions are shown in Figure~\ref{fig:poisson_2d_square_slit_nodes}. It is seen that the SPINN algorithm learns the optimal position of the nodes and the size of the kernels at the nodal positions appropriately. A comparison of the error of the SPINN solution with respect to a reference finite element solution using a very fine mesh is shown in Figure~\ref{fig:poisson_2d_square_slit_convergence}.
 
-The examples shown so far feature domains with regular geometric shapes. The SPINN algorithm, however, works well on arbitrarily shaped domains too. The solution of the Poisson equation $\nabla^2 u(x,y) + 1 = 0$ on an irregularly shaped domain is shown in Figure~\ref{fig:poisson2d_irregular}, and a reference finite element solution computed using a fine mesh is shown in Figure~\ref{fig:poisson2d_irregular_fem}. The distribution of the nodes in this case is shown in Figure~\ref{fig:poisson2d_irregular_nodes}.  The $L_{\infty}$ error of the SPINN solution was found to be around $4.9\times 10^{-3}$. 
+The examples shown so far feature domains with regular geometric shapes. The SPINN algorithm, however, works well on arbitrarily shaped domains too. The solution of the Poisson equation $\nabla^2 u(x,y) + 1 = 0$ on an irregularly shaped domain is shown in Figure~\ref{fig:poisson2d_irregular}, and a reference finite element solution computed using a fine mesh is shown in Figure~\ref{fig:poisson2d_irregular_fem}. The distribution of the nodes in this case is shown in Figure~\ref{fig:poisson2d_irregular_nodes}.  The $L_{\infty}$ error of the SPINN solution was found to be around $4.9\times 10^{-3}$.
 
 \begin{figure}
 \begin{subfigure}{0.32\textwidth}
 \centering
 \includegraphics[width=\textwidth]{figures/poisson2d_sine_conv/sine2d_softplus_n_100.pdf}
 \caption{SPINN solution with softplus hat kernel.}
-\label{fig:2d_A_softplus_n_100}    
+\label{fig:2d_A_softplus_n_100}
 \end{subfigure}
 ~
 \begin{subfigure}{0.32\textwidth}
 \centering
 \includegraphics[width=\textwidth]{figures/poisson2d_sine_conv/sine2d_Linf_error_n_100.pdf}
 \caption{$L_{\infty}$ error as a function of iteration.}
-\label{fig:2d_A_Linf_n_100}      
+\label{fig:2d_A_Linf_n_100}
 \end{subfigure}
 ~
 \begin{subfigure}{0.32\textwidth}
@@ -316,7 +316,7 @@ We now present examples involving time dependent PDEs. To start with, we conside
 \caption{Figure~\ref{fig:heat_eqn_compare} compares the heat equation solution on the domain $(0,1)$ over time interval $[0, 0.2]$ using the implicit finite difference SPINN, the space-time solution, and exact solution. Figure~\ref{fig:heat_eqn_st_sol} depicts the space time solution for the heat equation.  Figure~\ref{fig:advection_comp} shows the solution of the linear advection equation with the hybrid implicit finite difference SPINN, and space-time solution which is also shown in ~\ref{fig:advection_st}.  Figure~\ref{fig:advection_nodes} shows the location of the nodes at different times for the advection problem along with their widths.
 Figure~\ref{fig:burgers_comp} depicts the solution of the implicit finite difference SPINN solution for the Burgers' equation and compares it with that obtained using PyClaw.}
 \label{fig:time_varying}
-\end{figure} 
+\end{figure}
 
 \textbf{Linear advection equation.}
 We study next the classic hyperbolic time-dependent PDE in one spatial dimension, namely the linear advection equation $u_t + au_x = 0$, where $x\in \mathbb{R}$ and $t\in [0, T]$.  The exact solution for this problem with  initial condition $u(x, t=0) = u_0(x)$ is $u(x, t) = u_0(x - at)$. As done earlier for the heat equation, we solve the problem using both a first-order, implicit FD-SPINN as well as a space-time SPINN.  Time snapshots of the solution with a Gaussian pulse as initial condition are shown in Figure~\ref{fig:advection_comp}.  In Figure~\ref{fig:advection_st} the space-time solution is compared with the exact solution, shown in wireframe.  The location of the interior nodes along with the kernel widths is shown in Figure~\ref{fig:advection_nodes}.  The nodes are initially placed uniformly. It is worth emphasizing that the nodes adapt in time and space to capture the features of the solution, which in this case is a travelling wave.  We also point out that widths of the kernel are narrow around the peak of the wave while they are broad away from the peak thereby demonstrating mesh-adaptivity.
@@ -354,7 +354,7 @@ The primary purpose of the various examples presented earlier is to provide a pr
 
 On the other hand, the FD-SPINN algorithm does not suffer from this problem since SPINN is only used to represent the spatial solution and the problem is still asymmetric in time owing to the use of finite differences to approximate time derivatives. While we have used a first order scheme here as proof-of-concept of FD-SPINN, it is in principle straightforward to implement higher order schemes to control the time discretization errors using methods such as those proposed in \cite{SCL2020pre}. We also point out that the FD-SPINN algorithms presented here are different from the corresponding finite difference schemes since the spatial derivatives are handled \emph{exactly} using automatic differentiation. Automatic differentiation has been used in the context of finite element discretization problems in both static \cite{TRRB2002} and dynamic \cite{RG2014} PDEs, but the implicit finite difference schemes we propose here provide a systematic means to develop a variety of efficient time marching schemes.
 
-\textbf{Computational efficiency.} The current implementation of SPINN has been designed as a proof-of-concept.  While the problems considered in this work can be solved with very little computational effort, the implementation will not scale well for larger problems. This is because the method currently evaluates the effect of \emph{all} the nodes on a given sample point making the problem $O(NM)$ given $N$ nodes and $M$ samples.  We have investigated performing spatial convolutions using the \texttt{pytorch-geometric} package~\cite{pytorch_geometric} to accelerate this computation by restricting the interaction of sampling points only with their nearest nodes, thereby reducing the problem to $O(nM)$ where $n$ is the typical number of neighbors.  While preliminary results are encouraging and allow us to use more nodes, there are some limitations and constraints that need to be investigated further. 
+\textbf{Computational efficiency.} The current implementation of SPINN has been designed as a proof-of-concept.  While the problems considered in this work can be solved with very little computational effort, the implementation will not scale well for larger problems. This is because the method currently evaluates the effect of \emph{all} the nodes on a given sample point making the problem $O(NM)$ given $N$ nodes and $M$ samples.  We have investigated performing spatial convolutions using the \texttt{pytorch-geometric} package~\cite{pytorch_geometric} to accelerate this computation by restricting the interaction of sampling points only with their nearest nodes, thereby reducing the problem to $O(nM)$ where $n$ is the typical number of neighbors.  While preliminary results are encouraging and allow us to use more nodes, there are some limitations and constraints that need to be investigated further.
 
 \textbf{Wavelet transforms.} The results presented earlier highlight how the SPINN model is able to learn a variety of different length and time scales inherent in a given problem as part of the learning algorithm. A class of classical computational models for multiresolution analysis is wavelet based solutions of PDEs; see for instance \cite{WA94}. It is straightforward to recast wavelet transforms as a SPINN architecture in a manner similar to how the Fourier transform are handled in this work. An advantage of wavelet based representations is that the structure inherent in the scaling and shifting operations in wavelets can be efficiently implemented using spatial convolutions discussed earlier. We wish to reiterate that our current SPINN model already possesses a multiresolution capability on account of the kernel centers and widths being trainable parameters, as is amply demonstrated in the various examples presented.
 
@@ -369,7 +369,7 @@ Thus denoting by $\phi_i$ the output of the $i^{th}$ neuron in the last hidden l
 \begin{displaymath}
 u(x) = w_0 + \sum_{i=1}^{n_N} w_i \phi_i(x).
 \end{displaymath}
-We thus see that the final layer connection weights and biases can be interpreted as the coefficients of a Ritz type approximation of $u$. Thus using a collocation technique to train the network as is done in PINNs can be thought of as learning global basis functions and their corresponding weights, with the caveat that different nodes have different basis functions. SPINNs, on the other hand are more efficient since they use shifted and scaled versions of a single kernel. They can thus be thought of as an improvement of PINNs by using known information about basis functions to sparsify the network structure and eliminate the arbitrariness that attends the choice of DNN architectures in PINNs.  
+We thus see that the final layer connection weights and biases can be interpreted as the coefficients of a Ritz type approximation of $u$. Thus using a collocation technique to train the network as is done in PINNs can be thought of as learning global basis functions and their corresponding weights, with the caveat that different nodes have different basis functions. SPINNs, on the other hand are more efficient since they use shifted and scaled versions of a single kernel. They can thus be thought of as an improvement of PINNs by using known information about basis functions to sparsify the network structure and eliminate the arbitrariness that attends the choice of DNN architectures in PINNs.
 
 
 \section*{Conclusion}
@@ -408,7 +408,7 @@ For time dependent PDEs we use two different SPINN algorithms. The first is the 
 We wish to emphasize that the spatial derivatives are computed \emph{exactly} using automatic differentiation since the spatial approximation uses SPINN. Thus this implicit scheme is different in comparison to traditional time marching schemes. The loss in the interior of the domain $[0,L]$ is computed as the squared residue of the foregoing equation. The second algorithm uses SPINN for both space and time discretization. The implementation of the space-time SPINN solution is similar to the implementation of second order PDEs described earlier.
 
 \section*{Author contributions}
-Both authors contributed equally to the conceptualization, formulation of the problem, developing the codes, performing the analyses and writing the manuscript.  
+Both authors contributed equally to the conceptualization, formulation of the problem, developing the codes, performing the analyses and writing the manuscript.
 
 \bibliographystyle{plain}
 \bibliography{spinn}
@@ -418,7 +418,7 @@ Both authors contributed equally to the conceptualization, formulation of the pr
 \appendix
 
 \section{ReLU networks and piecewise linear finite element approximation} \label{app:relu_fem_1d}
-In this section, we illustrate the connection between SPINN and DNN represenations for PDEs that have been been previously studied. To keep the discussion concrete we focus on the special case of one spatial dimension. Consider the problem of minimizing the functional $I:H^1_0([0,1]) \to \mathbb{R}$, 
+In this section, we illustrate the connection between SPINN and DNN represenations for PDEs that have been been previously studied. To keep the discussion concrete we focus on the special case of one spatial dimension. Consider the problem of minimizing the functional $I:H^1_0([0,1]) \to \mathbb{R}$,
 \begin{equation} \label{eq:fnl_1d}
 I(u) = \frac{1}{2}\int_0^1 \left(\frac{du(x)}{dx}\right)^2 \,dx - \int_0^1 f(x)u(x) \,dx,
 \end{equation}
@@ -429,7 +429,7 @@ where $f \in L^2([0,1])$. A standard argument shows that the Euler-Lagrange equa
 u(0) = 0, & \quad u(1) = 0.
 \end{split}
 \end{equation}
-To illustrate this, we consider the special case of a piecewise linear finite element approximation of the solution of \eqref{eq:ode_2ndorder_1d}. The basis functions for a piecewise linear finite element approximation can be equivalently thought of as ReLU network with one hidden layer. For this case, a convenient SPINN architecture is the following ReLU network with one hidden layer: 
+To illustrate this, we consider the special case of a piecewise linear finite element approximation of the solution of \eqref{eq:ode_2ndorder_1d}. The basis functions for a piecewise linear finite element approximation can be equivalently thought of as ReLU network with one hidden layer. For this case, a convenient SPINN architecture is the following ReLU network with one hidden layer:
 \begin{equation} \label{eq:spinn_1d}
 u(x) = \sum_{i=0}^N w_i \text{ReLU}(x - x_i),
 \end{equation}
@@ -454,9 +454,9 @@ u(x) = \sum_{i=0}^{N - 1} (\theta_{i+1} - \theta_i) \text{ReLU}(x - x_i),
 \end{equation}
 where $\theta_i = (U_i - U_{i-1})/h_i$. The representation \eqref{eq:fem_1d_ReLU} informs us that a piecewise linear finite element approximation of 1d functions is equivalent to a DNN with one hidden layer with weights and biases consistent with \eqref{eq:fem_1d_ReLU}.
 
-In \cite{HLXZ2020}, the authors proposed a hybrid method wherein they use the representation \eqref{eq:fem_1d_ReLU}, with the weights $(\theta_i)$ computed using the standard finite element method holding the mesh fixed, and the biases $(x_i)$ are computed by minimizing the loss $I$ as a function of the biases $(x_i)$ for fixed values of the weights $(\theta_i)$. This staggered approach, however, does not take full advantage of the variety of stochastic gradient algorithms that have been developed for DNNs. In contrast, the SPINN architecture which we propose in this work does not use a staggered approach, and is more efficient. 
+In \cite{HLXZ2020}, the authors proposed a hybrid method wherein they use the representation \eqref{eq:fem_1d_ReLU}, with the weights $(\theta_i)$ computed using the standard finite element method holding the mesh fixed, and the biases $(x_i)$ are computed by minimizing the loss $I$ as a function of the biases $(x_i)$ for fixed values of the weights $(\theta_i)$. This staggered approach, however, does not take full advantage of the variety of stochastic gradient algorithms that have been developed for DNNs. In contrast, the SPINN architecture which we propose in this work does not use a staggered approach, and is more efficient.
 
-Even in this simple case, we note the following features: (i) the weights connecting the input layer, which just takes in $x$, and the hidden layer is $1$ uniformly, (ii) the biases of the hidden layer are directly interpretable as the position of the nodes of the finite element discretization, and (iii) the weights connecting the hidden layer and the output layer are interpretable in terms of the nodal values of the corresponding finite element solution. We also see that the number of neurons in the hidden layer is just the number of interior nodes in the finite element discretization. This is in sharp contrast to the approach followed in Physics Informed Neural Networks (PINN) \cite{RPK2019}, or the Deep-Ritz method \cite{EYu2018}, which employ dense neural networks, and hence are not easily interpretable. 
+Even in this simple case, we note the following features: (i) the weights connecting the input layer, which just takes in $x$, and the hidden layer is $1$ uniformly, (ii) the biases of the hidden layer are directly interpretable as the position of the nodes of the finite element discretization, and (iii) the weights connecting the hidden layer and the output layer are interpretable in terms of the nodal values of the corresponding finite element solution. We also see that the number of neurons in the hidden layer is just the number of interior nodes in the finite element discretization. This is in sharp contrast to the approach followed in Physics Informed Neural Networks (PINN) \cite{RPK2019}, or the Deep-Ritz method \cite{EYu2018}, which employ dense neural networks, and hence are not easily interpretable.
 
 \section{Kernel functions} \label{app:softplus}
 Motivated by the fact that piecewise linear finite element basis functions in 1D can be written in terms of ReLU functions, we propose a new class of basis functions in one and higher dimensions that naturally generalize ReLU-based shape functions that are differentiable, but do not have compact support. Recall that the softplus function, defined as,
@@ -467,34 +467,34 @@ provides a smooth approximation of the ReLU function, as shown in Figure~\ref{fi
 
 \begin{figure}[htpb]
 \centering
-\includegraphics[width=0.5\textwidth]{images/SoftPlus_Relu.pdf}
+\includegraphics[width=0.5\textwidth]{figures/misc/SoftPlus_Relu.pdf}
 \caption{Comparison of the softplus and ReLU functions.}
 \label{fig:softplus_relu}
 \end{figure}
 
-The softplus function can now be used to create a basis function with \emph{almost} compact support in a manner analogous to the construction of piecewise linear finite element basis functions using ReLU functions. Specifically, we note that the function 
+The softplus function can now be used to create a basis function with \emph{almost} compact support in a manner analogous to the construction of piecewise linear finite element basis functions using ReLU functions. Specifically, we note that the function
 \begin{displaymath}
 N(x) = \frac{1}{\rho(1)}\rho\left(1 + 2\log 2 - \rho(x) - \rho(-x)\right)
 \end{displaymath}
-provides one such representation. We call this the \emph{softplus hat} function. A graph of the softplus hat function is shown in Figure~\ref{fig:softplus_hat_1d}. What makes this representation interesting is the fact that it can be immediately written as a two layer neural network as follows.  The input $x$ first feeds into a hidden layer with two neurons, with weights $(1, -1)$, bias $0$ and softplus activation function. The output of this hidden layer $(\rho(x), \rho(-x))$ is then linearly combined using a second hidden layer with one neuron with weights $(-1, -1)$, bias $1 + 2\log 2$ and softplus activation function. The output of this layer is therefore $\rho\left(1 + 2\log 2 - \rho(x) - \rho(-x)\right)$. Finally, it is straightforward to scale this by a factor of $1/\rho(1)$ to get the final output $N(x)$. We thus see that the softplus hat function is indeed transcribable exactly as a neural network. 
+provides one such representation. We call this the \emph{softplus hat} function. A graph of the softplus hat function is shown in Figure~\ref{fig:softplus_hat_1d}. What makes this representation interesting is the fact that it can be immediately written as a two layer neural network as follows.  The input $x$ first feeds into a hidden layer with two neurons, with weights $(1, -1)$, bias $0$ and softplus activation function. The output of this hidden layer $(\rho(x), \rho(-x))$ is then linearly combined using a second hidden layer with one neuron with weights $(-1, -1)$, bias $1 + 2\log 2$ and softplus activation function. The output of this layer is therefore $\rho\left(1 + 2\log 2 - \rho(x) - \rho(-x)\right)$. Finally, it is straightforward to scale this by a factor of $1/\rho(1)$ to get the final output $N(x)$. We thus see that the softplus hat function is indeed transcribable exactly as a neural network.
 
-It is also straightforward to generalize the one dimensional softplus hat function to higher dimensions. The function $N:\mathbb{R}^d \to \mathbb{R}$ defined as 
+It is also straightforward to generalize the one dimensional softplus hat function to higher dimensions. The function $N:\mathbb{R}^d \to \mathbb{R}$ defined as
 \begin{equation} \label{eq:hat_softplus_nd1}
 N(x^1, \ldots, x^d) = \frac{1}{\rho(1)}\rho\left(1 + 2d\log 2 - \sum_{k=1}^d (\rho(x^i) + \rho(-x^i))\right)
 \end{equation}
-provides one such example. A graph of this function for $d = 2$ is shown in Figure~\ref{fig:softplus_hat_2d}, while a schematic of the corresponding neural network architecture for the two dimensional softplus hat functions is shown in Figure~\ref{fig:softplus_hat_nn} in the main text. Higher dimensional softplus hat functions are also exactly represented by an equivalent neural network. 
+provides one such example. A graph of this function for $d = 2$ is shown in Figure~\ref{fig:softplus_hat_2d}, while a schematic of the corresponding neural network architecture for the two dimensional softplus hat functions is shown in Figure~\ref{fig:softplus_hat_nn} in the main text. Higher dimensional softplus hat functions are also exactly represented by an equivalent neural network.
 
 \begin{figure}[htpb]
 \begin{subfigure}{0.4\textwidth}
 \centering
-\includegraphics[width=\textwidth]{images/SoftPlus_Hat_1d.pdf}
+\includegraphics[width=\textwidth]{figures/misc/SoftPlus_Hat_1d.pdf}
 \caption{Softplus hat function in 1D}
 \label{fig:softplus_hat_1d}
 \end{subfigure}
 ~
 \begin{subfigure}{0.6\textwidth}
 \centering
-\includegraphics[width=\textwidth]{images/SoftPlus_Hat_2d.pdf}
+\includegraphics[width=\textwidth]{figures/misc/SoftPlus_Hat_2d.png}
 \caption{Softplus hat function in 2D}
 \label{fig:softplus_hat_2d}
 \end{subfigure}
@@ -506,7 +506,7 @@ Though the softplus hat kernels do not have compact support, they approach zero 
 \section{Code design}
 
 \begin{sloppypar}
-The source code for SPINN is freely available at \url{https://github.com/nn4pde/SPINN}.  We use the Python programming language, the PyTorch~\cite{pytorch} library, and NumPy~\cite{numpy}.  In addition the code employs the following libraries for visualization and plotting, \code{matplotlib}~\cite{mpl} is used for the simpler plots and Mayavi~\cite{mayavi} is used for more complex three-dimensional plots.  We use the \code{pytorch-geometric}~\cite{pytorch_geometric} package to demonstrate the use of geometric convolutions as a means to accelerate the performance, however this is an optional requirement.  Finally, every plot shown in this manuscript is completely automated using the \code{automan}~\cite{automan:2018} package. 
+The source code for SPINN is freely available at \url{https://github.com/nn4pde/SPINN}.  We use the Python programming language, the PyTorch~\cite{pytorch} library, and NumPy~\cite{numpy}.  In addition the code employs the following libraries for visualization and plotting, \code{matplotlib}~\cite{mpl} is used for the simpler plots and Mayavi~\cite{mayavi} is used for more complex three-dimensional plots.  We use the \code{pytorch-geometric}~\cite{pytorch_geometric} package to demonstrate the use of geometric convolutions as a means to accelerate the performance, however this is an optional requirement.  Finally, every plot shown in this manuscript is completely automated using the \code{automan}~\cite{automan:2018} package.
 \end{sloppypar}
 
 Our code follows a simple object-oriented design employing the following objects:
@@ -623,34 +623,34 @@ We now report convergence studies for two of the ODEs specified above - 1d-B and
 \centering
 \includegraphics[width=\textwidth]{figures/ode3_conv_1/ode3_softplus_n_1.pdf}
 \caption{Softplus hat kernel}
-\label{fig:ode3_softplus_n_1}    
+\label{fig:ode3_softplus_n_1}
 \end{subfigure}
 ~
 \begin{subfigure}{0.32\textwidth}
 \centering
 \includegraphics[width=\textwidth]{figures/ode3_conv_1/ode3_kernel_n_1.pdf}
 \caption{Neural network kernel}
-\label{fig:ode3_kernel_n_1}    
+\label{fig:ode3_kernel_n_1}
 \end{subfigure}
 \begin{subfigure}{0.32\textwidth}
 \centering
 \includegraphics[width=\textwidth]{figures/ode3_conv_1/ode3_L1_error_n_1.pdf}
 \caption{$L_1$ error}
-\label{fig:ode3_L1_n_1}  
+\label{fig:ode3_L1_n_1}
 \end{subfigure}
 ~
 \begin{subfigure}{0.32\textwidth}
 \centering
 \includegraphics[width=\textwidth]{figures/ode3_conv_1/ode3_L2_error_n_1.pdf}
 \caption{$L_2$ error}
-\label{fig:ode3_L2_n_1}      
+\label{fig:ode3_L2_n_1}
 \end{subfigure}
 ~
 \begin{subfigure}{0.32\textwidth}
 \centering
 \includegraphics[width=\textwidth]{figures/ode3_conv_1/ode3_Linf_error_n_1.pdf}
 \caption{$L_{\infty}$ error}
-\label{fig:ode3_Linf_n_1}      
+\label{fig:ode3_Linf_n_1}
 \end{subfigure}
 \caption{Convergence study for ODE 1d-C. The SPINN models have a single internal node in conjunction with three different kernels: Gaussian, softplus hat, and a deep neural network with tanh activation function and with an input layer consisting of 1 neuron, 2 hidden layers with 5 neurons each and an output layer with one neuron. The $L_1$, $L_2$ and $L_{\infty}$ errors of the SPINN solution, computed with respect to the known exact solution, are also shown.}
 \label{fig:ode_1d_C_n_1}
@@ -668,34 +668,34 @@ We now report convergence studies for two of the ODEs specified above - 1d-B and
 \centering
 \includegraphics[width=\textwidth]{figures/ode3_conv_3/ode3_softplus_n_3.pdf}
 \caption{Softplus hat kernel}
-\label{fig:ode3_softplus_n_3}    
+\label{fig:ode3_softplus_n_3}
 \end{subfigure}
 ~
 \begin{subfigure}{0.32\textwidth}
 \centering
 \includegraphics[width=\textwidth]{figures/ode3_conv_3/ode3_kernel_n_3.pdf}
 \caption{Neural network kernel}
-\label{fig:ode3_kernel_n_3}    
+\label{fig:ode3_kernel_n_3}
 \end{subfigure}
 \begin{subfigure}{0.32\textwidth}
 \centering
 \includegraphics[width=\textwidth]{figures/ode3_conv_3/ode3_L1_error_n_3.pdf}
 \caption{$L_1$ error}
-\label{fig:ode3_L1_n_3}  
+\label{fig:ode3_L1_n_3}
 \end{subfigure}
 ~
 \begin{subfigure}{0.32\textwidth}
 \centering
 \includegraphics[width=\textwidth]{figures/ode3_conv_3/ode3_L2_error_n_3.pdf}
 \caption{$L_2$ error}
-\label{fig:ode3_L2_n_3}      
+\label{fig:ode3_L2_n_3}
 \end{subfigure}
 ~
 \begin{subfigure}{0.32\textwidth}
 \centering
 \includegraphics[width=\textwidth]{figures/ode3_conv_3/ode3_Linf_error_n_3.pdf}
 \caption{$L_{\infty}$ error}
-\label{fig:ode3_Linf_n_3_full}      
+\label{fig:ode3_Linf_n_3_full}
 \end{subfigure}
 \caption{Convergence study for ODE 1d-C. The SPINN models have three internal nodes in conjunction with three different kernels: Gaussian, softplus hat, and a deep neural network with tanh activation function and with an input layer consisting of 1 neuron, 2 hidden layers with 5 neurons each and an output layer with one neuron. The $L_1$, $L_2$ and $L_{\infty}$ errors of the SPINN solution, computed with respect to the known exact solution, are also shown.}
 \label{fig:ode_1d_C_n_3}
@@ -706,43 +706,43 @@ We next discuss the effect of random sampling on the performance of the algorith
 \begin{figure}
 \begin{subfigure}{0.32\textwidth}
 \centering
-\includegraphics[width=\textwidth]{figures/ode2_conv_5/ode2_n_5_f_0.1.pdf}
+\includegraphics[width=\textwidth]{figures/ode2_conv_5/{ode2_n_5_f_0.1}.pdf}
 \caption{$f = 0.1$}
 \label{fig:ode2_n_5_f_0p1}
 \end{subfigure}
 ~
 \begin{subfigure}{0.32\textwidth}
 \centering
-\includegraphics[width=\textwidth]{figures/ode2_conv_5/ode2_n_5_f_0.2.pdf}
+\includegraphics[width=\textwidth]{figures/ode2_conv_5/{ode2_n_5_f_0.2}.pdf}
 \caption{$f=0.2$}
-\label{fig:ode2_n_5_f_0p2_a}    
+\label{fig:ode2_n_5_f_0p2_a}
 \end{subfigure}
 ~
 \begin{subfigure}{0.32\textwidth}
 \centering
-\includegraphics[width=\textwidth]{figures/ode2_conv_5/ode2_n_5_f_0.3.pdf}
+\includegraphics[width=\textwidth]{figures/ode2_conv_5/{ode2_n_5_f_0.3}.pdf}
 \caption{$f=0.3$}
-\label{fig:ode2_n_5_f_0p3}    
+\label{fig:ode2_n_5_f_0p3}
 \end{subfigure}
 \begin{subfigure}{0.32\textwidth}
 \centering
-\includegraphics[width=\textwidth]{figures/ode2_conv_5/ode2_n_5_f_0.5.pdf}
+\includegraphics[width=\textwidth]{figures/ode2_conv_5/{ode2_n_5_f_0.5}.pdf}
 \caption{$f=0.5$}
-\label{fig:ode2_n_5_0p5}  
+\label{fig:ode2_n_5_0p5}
 \end{subfigure}
 ~
 \begin{subfigure}{0.32\textwidth}
 \centering
-\includegraphics[width=\textwidth]{figures/ode2_conv_5/ode2_n_5_f_0.75.pdf}
+\includegraphics[width=\textwidth]{figures/ode2_conv_5/{ode2_n_5_f_0.75}.pdf}
 \caption{$f=0.75$}
-\label{fig:ode2_n_5_0p75}      
+\label{fig:ode2_n_5_0p75}
 \end{subfigure}
 ~
 \begin{subfigure}{0.32\textwidth}
 \centering
-\includegraphics[width=\textwidth]{figures/ode2_conv_5/ode2_n_5_f_1.0.pdf}
+\includegraphics[width=\textwidth]{figures/ode2_conv_5/{ode2_n_5_f_1.0}.pdf}
 \caption{$f=1$}
-\label{fig:ode2_n_5_1}      
+\label{fig:ode2_n_5_1}
 \end{subfigure}
 \caption{Convergence study for ODE 1d-B. SPINN with Gaussian kernel is used to generate all these figures. The number of nodes is fixed at $n=5$ and the total number of samples is fixed at $n_s = 20n$. The various graphs shown here correspond to different fractions, $f$, of the samples used to evaluate the loss at each iteration.}
 \label{fig:ode_1d_B_n_6_f}
@@ -760,14 +760,14 @@ We next discuss the effect of random sampling on the performance of the algorith
 \centering
 \includegraphics[width=\textwidth]{figures/ode2_conv_5/ode2_L2_error_n_5_f.pdf}
 \caption{$L_2$ error}
-\label{fig:ode2_n_5_L2}    
+\label{fig:ode2_n_5_L2}
 \end{subfigure}
 ~
 \begin{subfigure}{0.32\textwidth}
 \centering
 \includegraphics[width=\textwidth]{figures/ode2_conv_5/ode2_Linf_error_n_5_f.pdf}
 \caption{$L_{\infty}$ error}
-\label{fig:ode2_n_5_Linfa}    
+\label{fig:ode2_n_5_Linfa}
 \end{subfigure}
 \caption{Convergence of errors for ODE 1d-B. The sampling ratio $f$ is varied while keeping the number of internal nodes and total number of sampling points fixed.}
 \label{fig:ode_1d_B_n_6_errors}
@@ -843,7 +843,7 @@ The following second order PDEs are solved in two dimensions:
  & u = 0 \text{ on } \partial \Omega.\\
 \text{2d-B:}\quad& \nabla^2 u(x,y) + 1 = 0, \quad (x,y) \in \Omega = (-1,1) \times (-1,1) \setminus [0,1),\\
  & u = 0 \text{ on } \partial \Omega.
-\end{split} 
+\end{split}
 \end{displaymath}
 The first PDE (2d-A) admits an exact solution
 \begin{displaymath}
@@ -865,34 +865,34 @@ We first present the convergence of SPINN with different activation functions wi
 \centering
 \includegraphics[width=\textwidth]{figures/poisson2d_sine_conv/sine2d_softplus_n_100.pdf}
 \caption{Softplus hat kernel}
-\label{fig:2d_A_softplus_n_100_a}    
+\label{fig:2d_A_softplus_n_100_a}
 \end{subfigure}
 ~
 \begin{subfigure}{0.32\textwidth}
 \centering
 \includegraphics[width=\textwidth]{figures/poisson2d_sine_conv/sine2d_kernel_n_100.pdf}
 \caption{Neural network kernel}
-\label{fig:2d_A_kernel_n_100}    
+\label{fig:2d_A_kernel_n_100}
 \end{subfigure}
 \begin{subfigure}{0.32\textwidth}
 \centering
 \includegraphics[width=\textwidth]{figures/poisson2d_sine_conv/sine2d_L1_error_n_100.pdf}
 \caption{$L_1$ error}
-\label{fig:2d_A_L1_n_100}  
+\label{fig:2d_A_L1_n_100}
 \end{subfigure}
 ~
 \begin{subfigure}{0.32\textwidth}
 \centering
 \includegraphics[width=\textwidth]{figures/poisson2d_sine_conv/sine2d_L2_error_n_100.pdf}
 \caption{$L_2$ error}
-\label{fig:2d_A_L2_n_100}      
+\label{fig:2d_A_L2_n_100}
 \end{subfigure}
 ~
 \begin{subfigure}{0.32\textwidth}
 \centering
 \includegraphics[width=\textwidth]{figures/poisson2d_sine_conv/sine2d_Linf_error_n_100.pdf}
 \caption{$L_{\infty}$ error}
-\label{fig:2d_A_Linf_n_100_a}      
+\label{fig:2d_A_Linf_n_100_a}
 \end{subfigure}
 \caption{Convergence study for PDE 2d-A. The SPINN model has around $200$ internal nodes and $400$ sampling points. Three different kernels: Gaussian, softplus hat, and a deep neural network with tanh activation function and with an input layer consisting of 1 neuron, 2 hidden layers with 5 neurons each and an output layer with one neuron, are used. The $L_1$, $L_2$ and $L_{\infty}$ errors of the SPINN solution, computed with respect to the known exact solution, are also shown.}
 \label{fig:sine2d_conv_activation}
@@ -910,18 +910,18 @@ We first present the convergence of SPINN with different activation functions wi
 \centering
 \includegraphics[width=\textwidth]{figures/poisson2d_sine_nodes/sine2d_L2_error.pdf}
 \caption{$L_2$ error}
-\label{fig:2d_A_L2}    
+\label{fig:2d_A_L2}
 \end{subfigure}
 ~
 \begin{subfigure}{0.32\textwidth}
 \centering
 \includegraphics[width=\textwidth]{figures/poisson2d_sine_nodes/sine2d_Linf_error.pdf}
 \caption{$L_{\infty}$ error}
-\label{fig:2d_A_Linf_a}    
+\label{fig:2d_A_Linf_a}
 \end{subfigure}
 \caption{Convergence of errors for PDE 2d-A as a function of number of interior nodes. Softplus hat kernel is used for all the SPINN models, and the number of sampling points is chosen as 4 times the number of internal nodes.}
 \label{fig:sine2d_errors}
-\end{figure} 
+\end{figure}
 
 The second PDE (2d-B) does not have an exact solution, but it has known asymptotic properties around the origin. In the main text, the solution computed using SPINN is compared with a solution computed using the finite element method. The mesh for the finite element solution was created using Gmsh \cite{gmsh}. The finite element solution was computed using Fenics \cite{AlnaesBlechta2015a, LoggMardalEtAl2012a}. The source code for both the mesh generation and the finite element solution can be found inside the \code{code/mesh_data} and \code{code/fem} directories respectively.
 
@@ -949,7 +949,7 @@ The exact solution of the heat equation is then computed as
 \begin{displaymath}
 u(x,t) = \sum_{k=1}^{\infty} b_k \exp (-\alpha_k^2 t) \sin k\pi x, \quad \alpha_k = \frac{k\pi c}{L}.
 \end{displaymath}
-The example considered in the paper uses the following inputs: $f(x) = 2\sin \pi x$, $c = 1$, $L = 1$ and $T = 0.1$. The coefficients $(b_k)$ are easily computed as $b_1 = 2$, $b_k = 0, k = 2, 3, \ldots$. 
+The example considered in the paper uses the following inputs: $f(x) = 2\sin \pi x$, $c = 1$, $L = 1$ and $T = 0.1$. The coefficients $(b_k)$ are easily computed as $b_1 = 2$, $b_k = 0, k = 2, 3, \ldots$.
 
 This is solved using a space-time SPINN as well as the FD-SPINN method. The results have been already presented in the main text. The code for the space-time version is \code{heat1d.py} and the FD-SPINN version is \code{heat1d_fd_spinn.py}.  In Figure~\ref{fig:heat_nodes}, the final positions of the internal nodes learnt by the space-time SPINN and FD-SPINN methods are shown.
 
@@ -999,7 +999,7 @@ We show in Figure~\ref{fig:burgers_nodes} the position of the nodes learnt by th
 In this section we also demonstrate a space-time solution for the Burgers' equation over the domain $x \in [-1, 1]$ using the following initial condition:
 \begin{displaymath}
 u_0(x) = \begin{cases}
-\sin(2\pi(x + 0.3)), & -0.3 \le x \le 0.2,\\
+\sin(\pi(x + 0.75)), & -0.75 \le x \le 0.25,\\
 0, & \text{otherwise}.
 \end{cases}
 \end{displaymath}
@@ -1017,17 +1017,18 @@ Figure~\ref{fig:spinn_burgers_c} depicts the solution using a DNN kernel and thi
 \begin{figure}
 \centering
 \begin{subfigure}{0.45\textwidth}
-\includegraphics[width=\textwidth]{images/burgers_gaussian_n200.pdf}
+\includegraphics[width=\textwidth]{figures/burgers_st/gaussian_n200.pdf}
 \caption{$n = 200$, Gaussian.}
 \label{fig:spinn_burgers_a}
 \end{subfigure}
 ~
 \begin{subfigure}{0.45\textwidth}
-\includegraphics[width=\textwidth]{images/burgers_kernel_n120.pdf}
+\includegraphics[width=\textwidth]{figures/burgers_st/kernel_n120.pdf}
 \caption{$n = 100$, NN kernel.}
 \label{fig:spinn_burgers_c}
 \end{subfigure}
-\caption{Solution of the non-linear hyperbolic PDE $u_t + u u_x = 0$ on $[-1,1]$, with initial boundary conditions $u(x, 0) = \sin(\pi x)$ using SPINN with the Gaussian kernel with $200$, interior nodes shown at different times in (a). In (b) the case with 100 nodes but using a neural network for the kernel. }
+\caption{Solution of the non-linear hyperbolic PDE $u_t + u u_x = 0$ on
+  $[-1,1]$, with initial boundary conditions $u(x, 0) = \sin(\pi (x + 0.75))$ using SPINN with the Gaussian kernel with $200$, interior nodes shown at different times in (a). In (b) the case with 100 nodes but using a neural network for the kernel. }
 \label{fig:spinn_burgers}
 \end{figure}
 
@@ -1051,7 +1052,7 @@ The boundary conditions are given as,
     \frac{\partial p}{\partial n} &= 0,
 \end{split}
 \end{displaymath}
-where $n$ is the normal vector along the boundary. The velocity $v$ is zero on the boundary of the square.  Note that the velocity boundary conditions effectively mean that the fluid sticks to the boundary and does not penetrate the boundary. The Reynolds number, $Re$ for this problem is defined as, 
+where $n$ is the normal vector along the boundary. The velocity $v$ is zero on the boundary of the square.  Note that the velocity boundary conditions effectively mean that the fluid sticks to the boundary and does not penetrate the boundary. The Reynolds number, $Re$ for this problem is defined as,
 \begin{displaymath}
 Re = \frac{1}{\nu}
 \end{displaymath}

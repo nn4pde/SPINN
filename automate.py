@@ -1,29 +1,28 @@
 #!/usr/bin/env python
 import os
-from re import L
 from pathlib import Path
 
 from automan.api import Problem
-from automan.api import Automator, Simulation, filter_cases
+from automan.api import Automator, Simulation
 import numpy as np
 import torch
 import matplotlib
+from mayavi import mlab
 matplotlib.use('pdf')
 import matplotlib.pyplot as plt
-from mayavi import mlab
 mlab.options.offscreen = True
 
 USE_GPU = False
 
 
-fontsize=32
+fontsize = 32
 font = {'size': fontsize}
 matplotlib.rc('font', **font)
 
 
-def figure():
+def figure(fsize=24):
     plt.figure(figsize=(12, 12))
-    font = {'size': 24}
+    font = {'size': fsize}
     matplotlib.rc('font', **font)
 
 
@@ -33,7 +32,7 @@ def _plot_1d(problem, left_bdy=True, right_bdy=True):
         res = np.load(case.input_path('results.npz'))
         nn_state = torch.load(case.input_path('model.pt'))
 
-        plt.figure(figsize=(12,12))
+        plt.figure(figsize=(12, 12))
         plt.plot(
             res['x'], res['y_exact'],
             color='black', linewidth=6,
@@ -122,6 +121,84 @@ def plot_ug_solution(vtu, u):
     return s
 
 
+def softplus(x):
+    return np.log(1.0 + np.exp(x))
+
+
+def relu(x):
+    return np.maximum(0.0, x)
+
+
+def hat_softplus_1d(x):
+    return softplus(
+        1.0 + 2.0*np.log(2.0) - softplus(x) - softplus(-x)
+    ) / softplus(1.0)
+
+
+def gaussian_1d(x):
+    return np.exp(-0.5*x*x)
+
+
+def hat_softplus_2d(x, y):
+    return softplus(
+        1.0 + 4.0*np.log(2.0) - softplus(x) - softplus(-x)
+        - softplus(y) - softplus(-y)
+    )/softplus(1.0)
+
+
+class Misc(Problem):
+    def get_name(self):
+        return 'misc'
+
+    def setup(self):
+        self.cases = []
+
+    def _plot_softplus_relu(self):
+        fname = self.output_path('SoftPlus_ReLU.pdf')
+        xs = np.linspace(-8.0, 5.0, 200)
+        figure(fsize=32)
+        plt.plot(xs, relu(xs), 'k-', linewidth=8, label='ReLU')
+        plt.plot(xs, softplus(xs), 'b-', linewidth=6, label='SoftPlus')
+        plt.xlabel(r'$x$', fontsize=32)
+        plt.ylabel(r'$y$', fontsize=32)
+        plt.legend()
+        plt.grid()
+        plt.tight_layout()
+        plt.savefig(fname)
+        plt.close()
+
+    def _plot_softplus_hat(self):
+        xs = np.linspace(-12.0, 12.0, 200)
+        figure(fsize=32)
+        plt.plot(xs, gaussian_1d(xs), 'k--', linewidth=3, label='Gaussian')
+        plt.plot(xs, hat_softplus_1d(xs), 'b-',
+                 linewidth=6, label='Softplus hat')
+        plt.xlabel(r'$x$', fontsize=32)
+        plt.ylabel(r'$y$', fontsize=32)
+        plt.legend()
+        plt.grid()
+        plt.tight_layout()
+        fname = self.output_path('SoftPlus_Hat_1d.pdf')
+        plt.savefig(fname)
+        plt.close()
+
+    def _plot_softplus_hat_2d(self):
+        xs, ys = np.mgrid[-10.0:10.0:0.1, -10.0:10.0:0.1]
+        zs = hat_softplus_2d(xs, ys)
+        f = _mlab_figure(size=(1200, 900))
+        mlab.surf(xs, ys, zs, warp_scale='auto')
+        mlab.axes(ranges=[-10.0, 10.0, -10.0, 10.0, 0.0, 1.0])
+        mlab.view(160, 75, distance=350, focalpoint=[0.0, 100.0, 0.0])
+        fname = self.output_path('SoftPlus_Hat_2d.png')
+        mlab.savefig(fname)
+
+    def run(self):
+        self.make_output_dir()
+        self._plot_softplus_relu()
+        self._plot_softplus_hat()
+        self._plot_softplus_hat_2d()
+
+
 class ODE1(Problem):
     def get_name(self):
         return 'ode1'
@@ -193,6 +270,7 @@ class ODE3(Problem):
 
     def run(self):
         _plot_1d(self)
+
 
 def _plot_ode_conv(problem, n_nodes, pname='ode',
                    left_bdy=True, right_bdy=True):
@@ -1339,6 +1417,87 @@ class BurgersFD(Problem):
         plot_fd_centers(self, models, times)
 
 
+class BurgersST(Problem):
+    def get_name(self):
+        return 'burgers_st'
+
+    def _n_nodes(self, nn_state):
+        return len(nn_state['layer1.x'])
+
+    def setup(self):
+        base_cmd = (
+            'python3 code/burgers1d.py -d $output_dir --ic sin '
+        )
+
+        self.cases = [
+            Simulation(
+                root=self.input_path(f'{activation}_n{i}'),
+                base_command=base_cmd,
+                nodes=i, samples=10000,
+                n_train=20000,
+                lr=2e-3,
+                tol=1e-3,
+                duration=1.0,
+                activation=activation,
+                sample_frac=0.05,
+                viscosity=0.0
+            )
+            for i in (50, 100, 200) for activation in ('gaussian',)
+        ]
+        self.cases.append(
+            Simulation(
+                root=self.input_path(f'kernel_n_100'),
+                base_command=base_cmd,
+                nodes=100, samples=800,
+                n_train=5000,
+                lr=1e-3,
+                activation='kernel',
+                sample_frac=0.25
+            )
+        )
+
+    def _plot_solution(self, case, nodes, exact):
+        res = np.load(case.input_path('results.npz'))
+        x, t = res['x'], res['t']
+        u = res['u']
+        colors = ['black', 'blue', 'green', 'violet']
+        x_ex = exact['x']
+        u_ex = exact['u']
+        figure()
+
+        for count, i in enumerate((0, 3, 6, 10)):
+            plt.plot(
+                x_ex, u_ex[i],
+                linewidth=4, color=colors[count],
+                label='Exact (t=%.1f)' % t[0, i]
+            )
+            label = 'SPINN' if i == 10 else None
+            plt.plot(
+                x[:, i], u[:, i], '--', color='red',
+                linewidth=4, label=label
+            )
+        plt.xlabel(r'$x$', fontsize=24)
+        plt.ylabel(r'$u(x)$', fontsize=24)
+        plt.legend(loc='upper left')
+        plt.grid()
+        plt.xlim(-1.0, 1.0)
+        plt.ylim(-0.25, 1.5)
+        fname = self.output_path(
+            '%s_n%d.pdf' % (case.params['activation'], nodes)
+        )
+        plt.savefig(fname)
+        plt.close()
+
+    def run(self):
+        self.make_output_dir()
+        fname = os.path.join('code', 'data', 'pyclaw_burgers1d_sine.npz')
+        exact = np.load(fname)
+        for case in self.cases:
+            nn_state = torch.load(case.input_path('model.pt'))
+            nodes = self._n_nodes(nn_state)
+            self._plot_solution(case, nodes, exact)
+
+
 class TimeVarying(Problem):
     def _n_nodes(self, nn_state):
         return len(nn_state['layer1.center'])
@@ -1528,6 +1687,7 @@ class Advection(TimeVarying):
 
 if __name__ == '__main__':
     PROBLEMS = [
+        Misc,
         ODE1, ODE2, ODE3,
         ODE3Conv1, ODE3Conv3,
         ODE2Conv5,
@@ -1540,6 +1700,7 @@ if __name__ == '__main__':
         Irregular,
         Advection,
         BurgersFD,
+        BurgersST,
         Heat,
         Cavity
     ]
