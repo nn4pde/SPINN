@@ -33,4 +33,4 @@ if __name__ == '__main__':
         pde_cls=ODESimple, nn_cls=SPINN1D,
         plotter_cls=Plotter1D
     )
-    app.run(nodes=3, samples=15, lr=1e-2)
+    app.run(nodes=3, samples=19, lr=1e-4, n_train=10000, tol=2.5e-5)

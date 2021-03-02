@@ -137,7 +137,7 @@ if __name__ == '__main__':
         nn_cls=SPINN2D,
         plotter_cls=FEM
     )
-    app.run(nodes=50, samples=200, lr=1e-2)
+    app.run(nodes=200, samples=600, n_train=10000, lr=1e-3, tol=1e-4)
 
     # fvtu = 'fem/poisson_solution000000.vtu'
     # L1, L2, Linf = _get_errors(app.nn, fvtu)

@@ -50,4 +50,7 @@ if __name__ == '__main__':
         pde_cls=Neumann1D, nn_cls=SPINN1D,
         plotter_cls=Plotter1D
     )
-    app.run(nodes=20, samples=80, lr=1e-2)
+    app.run(
+        nodes=5, samples=100, sample_frac=0.1, n_train=50000,
+        lr=2e-3, tol=1e-3
+    )
