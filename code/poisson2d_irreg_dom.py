@@ -13,8 +13,8 @@ class Poisson2D(PDE):
     @classmethod
     def from_args(cls, args):
         return cls(args.f_nodes_int, args.f_nodes_bdy,
-            args.f_samples_int, args.f_samples_bdy,
-            args.sample_frac)
+                   args.f_samples_int, args.f_samples_bdy,
+                   args.sample_frac)
 
     @classmethod
     def setup_argparse(cls, parser, **kw):
@@ -88,10 +88,8 @@ class Poisson2D(PDE):
 
         return np.asarray(xs), np.asarray(ys)
 
-    def __init__(self,
-        f_nodes_int, f_nodes_bdy,
-        f_samples_int, f_samples_bdy,
-        sample_frac=1.0):
+    def __init__(self, f_nodes_int, f_nodes_bdy, f_samples_int, f_samples_bdy,
+                 sample_frac=1.0):
 
         self.f_nodes_int = f_nodes_int
         self.f_nodes_bdy = f_nodes_bdy
@@ -180,8 +178,8 @@ def _vtu2data(fname):
 
 def _get_errors(nn, fvtu):
     pts, u_exact = _vtu2data(fvtu)
-    x = pts[:,0]
-    y = pts[:,1]
+    x = pts[:, 0]
+    y = pts[:, 1]
     xt, yt = tensor(x.ravel()), tensor(y.ravel())
     u = nn(xt, yt).detach().cpu().numpy()
     u.shape = x.shape
@@ -206,8 +204,10 @@ class PointCloud(Plotter2D):
     def plot_solution(self):
         xn, yn, pn = self.get_plot_data()
         if self.plt1 is None:
-            mlab.figure(size=(700, 700), fgcolor=(0,0,0), bgcolor=(1,1,1))
-            self.plt1 = mlab.points3d(xn, yn, pn, pn)
+            mlab.figure(
+                size=(700, 700), fgcolor=(0, 0, 0), bgcolor=(1, 1, 1)
+            )
+            self.plt1 = mlab.points3d(xn, yn, pn, pn, colormap='viridis')
         else:
             self.plt1.mlab_source.scalars = pn
         return self.get_error(xn, yn, pn)
@@ -224,7 +224,7 @@ def plot(app):
     mlab.figure(size=(700, 700), fgcolor=(0, 0, 0), bgcolor=(1, 1, 1))
     pts, u_fem = _vtu2data(fvtu)
     src = mlab.pipeline.open(fvtu)
-    s = mlab.pipeline.surface(src)
+    s = mlab.pipeline.surface(src, colormap='viridis')
     mlab.colorbar(s)
     mlab.show()
 
@@ -236,4 +236,4 @@ if __name__ == '__main__':
         plotter_cls=PointCloud
     )
     app.run(lr=1e-3)
-    #plot(app)
+    # plot(app)

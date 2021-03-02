@@ -141,9 +141,13 @@ class CavityPlotter(Plotter2D):
         if not self.plt2:
             self.plt2 = mlab.points3d(
                 x, y, np.zeros_like(x), h, mode='2dcircle',
-                scale_factor=1.0, opacity=0.25
+                scale_factor=1.0, color=(1, 0, 0), opacity=0.4
             )
             self.plt2.glyph.glyph_source.glyph_source.resolution = 20
+            mlab.pipeline.glyph(
+                self.plt2, color=(1, 0, 0), scale_factor=0.025, opacity=0.4,
+                mode='2dcross', scale_mode='none'
+            )
         else:
             self.plt2.mlab_source.trait_set(x=x, y=y, scalars=h)
 
@@ -155,20 +159,24 @@ class CavityPlotter(Plotter2D):
         vmag = np.sqrt(u*u + v*v)
         pde = self.pde
         if self.plt1 is None:
-            mlab.figure(size=(700, 700))
+            mlab.figure(
+                size=(700, 700), fgcolor=(0, 0, 0), bgcolor=(1, 1, 1)
+            )
             if self.show_exact and pde.has_exact():
                 un = pde.exact(xn, yn)
-                mlab.surf(xn, yn, un, representation='wireframe')
+                mlab.surf(xn, yn, un, colormap='viridis',
+                          representation='wireframe')
             src = mlab.pipeline.vector_field(
                 xn, yn, np.zeros_like(xn), u, v, np.zeros_like(u),
                 scalars=vmag, name='vectors'
             )
             self.plt1 = mlab.pipeline.vectors(
-                src, scale_factor=0.2, mask_points=3
+                src, scale_factor=0.2, mask_points=3, colormap='viridis'
             )
             self.plt1.scene.z_plus_view()
             cgp = mlab.pipeline.contour_grid_plane(
-                src, opacity=0.8
+                src, opacity=0.8,
+                colormap='viridis',
             )
             cgp.enable_contours = False
             mlab.colorbar(self.plt1)

@@ -63,13 +63,10 @@ class Plotter1D(Plotter):
 
     def plot_weights(self):
         x = self.nn.centers().detach().cpu().numpy()
-        w = self.nn.weights().detach().cpu().squeeze().numpy()
         if not self.plt2:
             self.plt2, = plt.plot(x, np.zeros_like(x), 'o', label='centers')
-            self.plt3, = plt.plot(x, w, 'o', label='weights')
         else:
             self.plt2.set_data(x, np.zeros_like(x))
-            self.plt3.set_data(x, w)
 
     def plot(self):
         first = self.plt1 is None

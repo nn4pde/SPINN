@@ -54,9 +54,13 @@ class Plotter2D(Plotter):
         if not self.plt2:
             self.plt2 = mlab.points3d(
                 x, y, np.zeros_like(x), h, mode='2dcircle',
-                scale_factor=1.0
+                scale_factor=1.0, color=(1, 0, 0), opacity=0.6
             )
             self.plt2.glyph.glyph_source.glyph_source.resolution = 20
+            mlab.pipeline.glyph(
+                self.plt2, color=(1, 0, 0), scale_factor=0.025,
+                mode='2dcross', scale_mode='none', opacity=0.6
+            )
         else:
             self.plt2.mlab_source.trait_set(x=x, y=y, scalars=h)
 
@@ -64,11 +68,15 @@ class Plotter2D(Plotter):
         xn, yn, pn = self.get_plot_data()
         pde = self.pde
         if self.plt1 is None:
-            mlab.figure(size=(700, 700))
+            mlab.figure(
+                size=(700, 700), fgcolor=(0, 0, 0), bgcolor=(1, 1, 1)
+            )
+            cmap = 'viridis'
             if self.show_exact and pde.has_exact():
                 un = pde.exact(xn, yn)
-                mlab.surf(xn, yn, un, representation='wireframe')
-            self.plt1 = mlab.surf(xn, yn, pn, opacity=0.8)
+                mlab.surf(xn, yn, un,
+                          colormap=cmap, representation='wireframe')
+            self.plt1 = mlab.surf(xn, yn, pn, colormap=cmap, opacity=0.8)
             mlab.colorbar(self.plt1)
         else:
             self.plt1.mlab_source.scalars = pn
