@@ -486,8 +486,9 @@ def _plot_ode_conv_sampling(problem, n_nodes, pname='ode',
         )
 
         plt.tight_layout()
+        sample_frac = f"{case.params['sample_frac']}".replace('.', 'p')
         plt.savefig(problem.output_path(
-            f"{pname}_n_{n_nodes}_f_{case.params['sample_frac']}.pdf"
+            f"{pname}_n_{n_nodes}_f_{sample_frac}.pdf"
         ))
         plt.close()
 
@@ -1433,28 +1434,30 @@ class BurgersST(Problem):
             Simulation(
                 root=self.input_path(f'{activation}_n{i}'),
                 base_command=base_cmd,
-                nodes=i, samples=10000,
-                n_train=20000,
+                nodes=i, samples=i*5,
+                n_train=10000,
                 lr=2e-3,
                 tol=1e-3,
                 duration=1.0,
                 activation=activation,
-                sample_frac=0.05,
+                sample_frac=1.0,
                 viscosity=0.0
             )
-            for i in (50, 100, 200) for activation in ('gaussian',)
+            for i in (50, 100, 200, 400) for activation in ('gaussian',)
         ]
-        self.cases.append(
+        self.cases.extend([
             Simulation(
-                root=self.input_path(f'kernel_n_100'),
+                root=self.input_path(f'{activation}_n_100'),
                 base_command=base_cmd,
-                nodes=100, samples=800,
-                n_train=5000,
+                nodes=100, samples=500,
+                n_train=10000,
                 lr=1e-3,
-                activation='kernel',
-                sample_frac=0.25
+                activation=activation,
+                kernel_size=5,
+                sample_frac=1.0
             )
-        )
+            for activation in ('kernel', 'nnkernel')
+        ])
 
     def _plot_solution(self, case, nodes, exact):
         res = np.load(case.input_path('results.npz'))
@@ -1488,6 +1491,12 @@ class BurgersST(Problem):
         plt.savefig(fname)
         plt.close()
 
+    def _plot_solution_nodes(self, case, fname):
+        sd = np.load(case.input_path('results.npz'))
+        state = torch.load(case.input_path('model.pt'))
+        sdata = dict(x=sd['xp'], y=sd['tp'], u=sd['up'])
+        plot_solution_nodes(sdata, state, fname)
+
     def run(self):
         self.make_output_dir()
         fname = os.path.join('code', 'data', 'pyclaw_burgers1d_sine.npz')
@@ -1496,6 +1505,9 @@ class BurgersST(Problem):
             nn_state = torch.load(case.input_path('model.pt'))
             nodes = self._n_nodes(nn_state)
             self._plot_solution(case, nodes, exact)
+            self._plot_solution_nodes(
+                case, self.output_path('%s_centers.png' % case.name)
+            )
 
 
 class TimeVarying(Problem):
