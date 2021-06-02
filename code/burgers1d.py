@@ -108,4 +108,4 @@ if __name__ == '__main__':
         nn_cls=SPINN2D,
         plotter_cls=MyPlotter
     )
-    app.run(nodes=100, samples=800, xL=-1.0, xR=1.0, lr=1e-3)
+    app.run(nodes=200, samples=1000, xL=-1.0, xR=1.0, lr=1e-3)

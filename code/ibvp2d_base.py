@@ -133,9 +133,12 @@ class IBVP2D(PDE):
         if nb is None:
             nbx, nbt = self.nx, self.nt
         else:
-            nbx, nbt = self._get_points_split((xR - xL), T, nb)
+            nbx, nbt = self._get_points_split((xR - xL), T, nb + 1)
 
-        self.f_nodes = self._get_boundary_nodes(xL, xR, T, nbx, nbt)
+        if nb == 0:
+            self.f_nodes = ([], [])
+        else:
+            self.f_nodes = self._get_boundary_nodes(xL, xR, T, nbx, nbt)
 
         # Interior samples
         self.nsx, self.nst = self._get_points_split((xR - xL), T, ns)
@@ -169,7 +172,7 @@ class IBVP2D(PDE):
             return self.p_samples
         else:
             idx = np.random.choice(self.rng_interior,
-                size=self.sample_size, replace=False)
+                                   size=self.sample_size, replace=False)
             x, y = self.p_samples
             return x[idx], y[idx]
 

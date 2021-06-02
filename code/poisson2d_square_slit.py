@@ -26,7 +26,7 @@ class SquareSlit(RegularPDE):
         # Fixed nodes
         nb = n if nb is None else nb
         self.nb = nb
-        dxb2 = 1.0/(nb)
+        dxb2 = 1.0/(nb + 1)
         _x = np.linspace(dxb2 - 1.0, 1.0 - dxb2, nb)
         _o = np.ones_like(_x)
         nslit = int(nb//2 + 1)
@@ -133,7 +133,7 @@ class FEM(Plotter2D):
 
 if __name__ == '__main__':
     app = App2D(
-        pde_cls=SquareSlit, 
+        pde_cls=SquareSlit,
         nn_cls=SPINN2D,
         plotter_cls=FEM
     )
