@@ -2,7 +2,7 @@
 import os
 from pathlib import Path
 
-from automan.api import Problem
+from automan.api import Problem, PySPHProblem
 from automan.api import Automator, Simulation
 import numpy as np
 import torch
@@ -410,7 +410,7 @@ class ODE1Conv1(Problem):
 
     def run(self):
         _plot_ode_conv(self, self.n, 'ode1')
-        
+
 
 class ODE1Conv3(Problem):
     def get_name(self):
@@ -1467,31 +1467,34 @@ class Cavity(Problem):
 
     def plot_comparison(self):
         xg, vg, yg, ug = self.get_ghia_data()
-        figure()
-        s1 = plt.subplot(211)
-        s1.plot(ug, yg, 'o', color='red', label='Ghia et al.')
-        s2 = plt.subplot(212)
-        s2.plot(xg, vg, 'o', color='red', label='Ghia et al.')
+
+        f1, ax1 = plt.subplots(figsize=(12, 12))
+        f2, ax2 = plt.subplots(figsize=(12, 12))
+        ax1.plot(ug, yg, 'o', color='red', label='Ghia et al.')
+        ax1.set_xlabel(r'$u$')
+        ax1.set_ylabel(r'$y$')
+
+        ax2.plot(xg, vg, 'o', color='red', label='Ghia et al.')
+        ax2.set_xlabel(r'$x$')
+        ax2.set_ylabel(r'$v$')
         ls = [':', '--', '-']
         for i, case in enumerate(self.cases):
             nn_state = torch.load(case.input_path('model.pt'))
             nodes = self._n_nodes(nn_state)
             res = np.load(case.input_path('results.npz'))
             xc, uc, vc = res['xc'], res['uc'], res['vc']
-            s1.plot(uc, xc, ls[i], lw=3,
-                    label='SPINN (%d nodes)' % nodes)
-            s2.plot(xc, vc, ls[i], lw=3,
-                    label='SPINN (%d nodes)' % nodes)
+            ax1.plot(uc, xc, ls[i], lw=3,
+                     label='SPINN (%d nodes)' % nodes)
+            ax2.plot(xc, vc, ls[i], lw=3,
+                     label='SPINN (%d nodes)' % nodes)
 
-        s1.set_xlabel(r'$u$')
-        s1.set_ylabel(r'$y$')
-        s1.legend()
-        s2.set_xlabel(r'$x$')
-        s2.set_ylabel(r'$v$')
-        s2.legend()
-        fname = self.output_path('centerline_compare.pdf')
-        plt.savefig(fname)
-        plt.close()
+        ax1.legend()
+        ax2.legend()
+        plt.tight_layout()
+        f1.savefig(self.output_path('u_vs_y.pdf'))
+        f2.savefig(self.output_path('x_vs_v.pdf'))
+        plt.close(f1)
+        plt.close(f2)
 
     def plot_result(self):
         for case in self.cases:
@@ -1515,6 +1518,49 @@ class Cavity(Problem):
         self.make_output_dir()
         self.plot_result()
         self.plot_comparison()
+
+
+class CavityPySPH(PySPHProblem):
+    def get_name(self):
+        return 'cavity_pysph'
+
+    def setup(self):
+        cmd = 'pysph run cavity --re 100 --scheme edac --tf 15'
+        self.cases = [
+            Simulation(
+                root=self.input_path(f'nx_{i}'),
+                base_command=cmd, nx=i
+            )
+            for i in (10, 25, 50)
+        ]
+
+    def run(self):
+        self.make_output_dir()
+        fname = os.path.join('code', 'data', 'ghia_re_100.txt')
+        xg, vg, yg, ug = np.loadtxt(fname, unpack=True)
+        f1, ax1 = plt.subplots(figsize=(12, 12))
+        f2, ax2 = plt.subplots(figsize=(12, 12))
+
+        ax1.plot(ug, yg, 'o', color='red', label='Ghia et al.')
+        ax1.set_xlabel(r'$u$')
+        ax1.set_ylabel(r'$y$')
+        ax2.plot(xg, vg, 'o', color='red', label='Ghia et al.')
+        ax2.set_xlabel(r'$x$')
+        ax2.set_ylabel(r'$v$')
+        ls = [':', '--', '-']
+        for i, case in enumerate(self.cases):
+            nx = case.params['nx']
+            ax1.plot(case.data['u_c'], case.data['x'],
+                     ls[i], lw=3, label=f'SPH ({nx}x{nx})')
+            ax2.plot(case.data['x'], case.data['v_c'],
+                     ls[i], lw=3, label=f'SPH ({nx}x{nx})')
+        ax1.legend()
+        ax2.legend()
+        plt.tight_layout()
+        f1.savefig(self.output_path('u_vs_y.pdf'))
+        f2.savefig(self.output_path('x_vs_v.pdf'))
+        plt.close(f1)
+        plt.close(f2)
 
 
 def get_results(case, times):
@@ -1923,7 +1969,8 @@ if __name__ == '__main__':
         BurgersFD,
         BurgersST,
         Heat,
-        Cavity
+        Cavity,
+        CavityPySPH
     ]
     automator = Automator(
         simulation_dir='outputs',

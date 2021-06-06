@@ -25,12 +25,15 @@ class CavityPDE(RegularPDE):
         # Fixed nodes
         nb = n if nb is None else nb
         self.nb = nb
-        dxb2 = 1.0/(nb)
-        _x = np.linspace(dxb2, 1.0 - dxb2, nb)
-        _o = np.ones_like(_x)
-        x = np.hstack((_x, _o, _x, 0.0*_o))
-        y = np.hstack((_o*0.0, _x, _o, _x))
-        self.f_nodes = (x, y)
+        if nb == 0:
+            self.f_nodes = ([], [])
+        else:
+            dxb2 = 1.0/(nb)
+            _x = np.linspace(dxb2, 1.0 - dxb2, nb)
+            _o = np.ones_like(_x)
+            x = np.hstack((_x, _o, _x, 0.0*_o))
+            y = np.hstack((_o*0.0, _x, _o, _x))
+            self.f_nodes = (x, y)
 
         # Interior samples
         self.ns = ns = round(np.sqrt(ns) + 0.49)
@@ -46,7 +49,7 @@ class CavityPDE(RegularPDE):
         nbs = ns if nbs is None else nbs
         self.nbs = nbs
         sl = slice(0, 1.0, nbs*1j)
-        _x = np.linspace(dxb2, 1.0 - dxb2, nb)
+        _x = np.linspace(dxb2, 1.0 - dxb2, nbs)
         o = np.ones_like(_x)
 
         def tg(x):
