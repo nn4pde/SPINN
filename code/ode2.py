@@ -16,7 +16,7 @@ class Neumann1D(BasicODE):
         return uxx + np.pi*np.pi*u - np.pi*torch.sin(np.pi*x)
 
     def has_exact(self):
-            return True
+        return True
 
     def exact(self, x):
         return -0.5*x*np.cos(np.pi*x)

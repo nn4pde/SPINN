@@ -62,7 +62,7 @@ class BasicODE(PDE):
         return self.xn
 
     def fixed_nodes(self):
-        return self.xbn
+        return self.xbn #np.array([]) #self.xbn
 
     def interior(self):
         if abs(self.sample_frac - 1.0) < 1e-3:
@@ -90,3 +90,4 @@ class BasicODE(PDE):
     def interior_loss(self, nn):
         res = self._get_residue(nn)
         return (res**2).mean()
+        #return torch.abs(res).max()

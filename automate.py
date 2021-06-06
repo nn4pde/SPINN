@@ -212,9 +212,9 @@ class ODE1(Problem):
                 root=self.input_path(f'n_{i}'),
                 base_command=base_cmd,
                 nodes=i, samples=6*i,
-                n_train=10000,
+                n_train=100000,
                 lr=1e-4,
-                tol=2.5e-5
+                tol=1e-6
             )
             for i in (1, 3, 7)
         ]
@@ -235,10 +235,10 @@ class ODE2(Problem):
             Simulation(
                 root=self.input_path(f'n_{i}'),
                 base_command=base_cmd,
-                nodes=i, samples=20*i,
-                sample_frac=0.1,
-                n_train=50000,
-                lr=2e-3,
+                nodes=i, samples=15*i,
+                sample_frac=0.2,
+                n_train=100000,
+                lr=1e-3,
                 tol=1e-3
             )
             for i in (3, 5, 7)
@@ -261,9 +261,9 @@ class ODE3(Problem):
                 root=self.input_path(f'n_{i}'),
                 base_command=base_cmd,
                 nodes=i, samples=20*i,
-                n_train=20000,
-                lr=1e-3,
-                tol=1e-3
+                n_train=100000,
+                lr=1e-4,
+                tol=1e-6
             )
             for i in (1, 3, 7)
         ]
@@ -384,6 +384,90 @@ def _plot_ode_conv(problem, n_nodes, pname='ode',
     plt.close()
 
 
+class ODE1Conv1(Problem):
+    def get_name(self):
+        return 'ode1_conv_1'
+
+    def setup(self):
+        self.n = 1
+        self.ns = 6*self.n
+
+        base_cmd = (
+            'python3 code/ode1.py -d $output_dir'
+        )
+        self.cases = [
+            Simulation(
+                root=self.input_path(f'{activation}_n_{self.n}'),
+                base_command=base_cmd,
+                nodes=self.n, samples=self.ns,
+                n_train=1000000, n_skip=100,
+                lr=1e-4,
+                tol=1e-6,
+                activation=activation
+            )
+            for activation in ('kernel', 'softplus', 'gaussian')
+        ]
+
+    def run(self):
+        _plot_ode_conv(self, self.n, 'ode1')
+        
+
+class ODE1Conv3(Problem):
+    def get_name(self):
+        return 'ode1_conv_3'
+
+    def setup(self):
+        self.n = 3
+        self.ns = 6*self.n
+
+        base_cmd = (
+            'python3 code/ode1.py -d $output_dir'
+        )
+        self.cases = [
+            Simulation(
+                root=self.input_path(f'{activation}_n_{self.n}'),
+                base_command=base_cmd,
+                nodes=self.n, samples=self.ns,
+                n_train=1000000, n_skip=100,
+                lr=1e-4,
+                tol=1e-6,
+                activation=activation
+            )
+            for activation in ('kernel', 'softplus', 'gaussian')
+        ]
+
+    def run(self):
+        _plot_ode_conv(self, self.n, 'ode1')
+
+
+class ODE1Conv7(Problem):
+    def get_name(self):
+        return 'ode1_conv_7'
+
+    def setup(self):
+        self.n = 7
+        self.ns = 6*self.n
+
+        base_cmd = (
+            'python3 code/ode1.py -d $output_dir'
+        )
+        self.cases = [
+            Simulation(
+                root=self.input_path(f'{activation}_n_{self.n}'),
+                base_command=base_cmd,
+                nodes=self.n, samples=self.ns,
+                n_train=1000000, n_skip=100,
+                lr=1e-4,
+                tol=1e-6,
+                activation=activation
+            )
+            for activation in ('kernel', 'softplus', 'gaussian')
+        ]
+
+    def run(self):
+        _plot_ode_conv(self, self.n, 'ode1')
+
+
 class ODE3Conv1(Problem):
     def get_name(self):
         return 'ode3_conv_1'
@@ -400,12 +484,12 @@ class ODE3Conv1(Problem):
                 root=self.input_path(f'{activation}_n_{self.n}'),
                 base_command=base_cmd,
                 nodes=self.n, samples=self.ns,
-                n_train=20000, n_skip=1,
-                lr=1e-3,
-                tol=1e-3,
+                n_train=100000, n_skip=1,
+                lr=1e-4,
+                tol=1e-6,
                 activation=activation
             )
-            for activation in ('gaussian', 'softplus', 'kernel')
+            for activation in ('kernel', 'softplus', 'gaussian')
         ]
 
     def run(self):
@@ -428,12 +512,12 @@ class ODE3Conv3(Problem):
                 root=self.input_path(f'{activation}_n_{self.n}'),
                 base_command=base_cmd,
                 nodes=self.n, samples=self.ns,
-                n_train=20000, n_skip=1,
-                lr=1e-3,
-                tol=1e-3,
+                n_train=100000, n_skip=1,
+                lr=1e-4,
+                tol=1e-6,
                 activation=activation
             )
-            for activation in ('gaussian', 'softplus', 'kernel')
+            for activation in ('kernel', 'softplus', 'gaussian')
         ]
 
     def run(self):
@@ -553,13 +637,80 @@ def _plot_ode_conv_sampling(problem, n_nodes, pname='ode',
     plt.close()
 
 
+def _plot_ode_rep_sampling(problem, n_nodes, pname='ode',
+                           left_bdy=True, right_bdy=True):
+    problem.make_output_dir()
+
+    Linfs = []
+
+    plt.figure(figsize=(12,12))
+    plt.xlabel(r'$x$')
+    plt.ylabel(r'$u(x)$')
+    plt.grid()
+
+    count = 0
+    sample_frac = 0
+
+    for case in problem.cases:
+        count += 1
+        if count == 1:
+            sample_frac = case.params['sample_frac']
+
+        ## Plot SPINN vs exact solution
+        res = np.load(case.input_path('results.npz'))
+        nn_state = torch.load(case.input_path('model.pt'))
+
+        if count == 1:
+            plt.plot(
+                res['x'], res['y_exact'], 'k-',
+                linewidth=6,
+                label='Exact'
+            )
+
+        plt.plot(
+            res['x'], res['y'], 'o-',
+            markersize=8, linewidth=3,
+            label=f'Trial {count}'
+        )
+
+        ## Save errors
+        res = np.load(case.input_path('solver.npz'))
+        Linfs.append(res['error_Linf'])
+
+    plt.legend()
+    plt.tight_layout()
+    sample_frac = f"{sample_frac}".replace('.', 'p')
+    plt.savefig(problem.output_path(
+        f"{pname}_n_{n_nodes}_f_{sample_frac}_rep.pdf"
+    ))
+    plt.close()
+
+    ## Plot Linf error as function of iteration
+    plt.figure(figsize=(12,12))
+    plt.xscale('log')
+    plt.yscale('log')
+
+    for i in range(len(problem.cases)):
+        plt.plot(Linfs[i], '-', linewidth=4, label=f'Trial {i+1}')
+
+    plt.xlabel('Iterations')
+    plt.ylabel(r'$L_{\infty}$ error')
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig(problem.output_path(
+        f'{pname}_Linf_error_n_{n_nodes}_rep.pdf'
+    ))
+    plt.close()
+
+
 class ODE2Conv5(Problem):
     def get_name(self):
         return 'ode2_conv_5'
 
     def setup(self):
         self.n = 5
-        self.ns = 20*self.n
+        self.ns = 15*self.n
 
         base_cmd = (
             'python3 code/ode2.py -d $output_dir'
@@ -570,8 +721,8 @@ class ODE2Conv5(Problem):
                 base_command=base_cmd,
                 nodes=self.n, samples=self.ns,
                 sample_frac=f,
-                n_train=50000, n_skip=1,
-                lr=2e-3,
+                n_train=1000000, n_skip=1,
+                lr=1e-3,
                 tol=1e-3,
                 activation='gaussian'
             )
@@ -580,6 +731,57 @@ class ODE2Conv5(Problem):
 
     def run(self):
         _plot_ode_conv_sampling(self, self.n, 'ode2', right_bdy=False)
+
+
+class ODE2Rep5(Problem):
+    def get_name(self):
+        return 'ode2_rep_5'
+
+    def setup(self):
+        self.n = 5
+        self.ns = 15*self.n
+
+        base_cmd = (
+            'python3 code/ode2.py -d $output_dir'
+        )
+        self.cases = [
+            Simulation(
+                root=self.input_path(f'n_{self.n}_f_{f}_{i}'),
+                base_command=base_cmd,
+                nodes=self.n, samples=self.ns,
+                sample_frac=f,
+                n_train=1000000, n_skip=1,
+                lr=1e-3,
+                tol=1e-3,
+                activation='gaussian'
+            )
+            for i, f in enumerate((0.2, 0.2, 0.2, 0.2, 0.2))
+        ]
+
+    def run(self):
+        _plot_ode_rep_sampling(self, self.n, 'ode2', right_bdy=False)
+
+
+def _plot_1d_err(problem, pname, n_nodes):
+    problem.make_output_dir()
+    for case in problem.cases:
+        res = np.load(case.input_path('solver.npz'))
+        Linfs = res['error_Linf']
+
+        plt.figure(figsize=(12,12))
+        plt.xscale('log')
+        plt.yscale('log')
+
+        plt.plot(Linfs, '-', linewidth=4)
+
+        plt.xlabel('Iterations')
+        plt.ylabel(r'$L_{\infty}$ error')
+        plt.grid()
+        plt.tight_layout()
+        plt.savefig(problem.output_path(
+            f'{pname}_Linf_error_n_{n_nodes}.pdf'
+        ))
+        plt.close()
 
 
 class ODE1Var(Problem):
@@ -595,8 +797,8 @@ class ODE1Var(Problem):
                 root=self.input_path(f'n_{i}'),
                 base_command=base_cmd,
                 nodes=i, samples=500,
-                n_train=5000,
-                lr=1e-3,
+                n_train=100000,
+                lr=1e-4,
                 tol=-10.0
             )
             for i in (5,)
@@ -604,6 +806,7 @@ class ODE1Var(Problem):
 
     def run(self):
         _plot_1d(self)
+        _plot_1d_err(self, 'ode1_var', 5)
 
 
 class ODE3Var(Problem):
@@ -618,9 +821,9 @@ class ODE3Var(Problem):
             Simulation(
                 root=self.input_path(f'n_{i}'),
                 base_command=base_cmd,
-                nodes=i, samples=200,
-                n_train=5000,
-                lr=5e-3,
+                nodes=i, samples=250,
+                n_train=100000,
+                lr=1e-4,
                 tol=-10.0
             )
             for i in (5,)
@@ -628,6 +831,7 @@ class ODE3Var(Problem):
 
     def run(self):
         _plot_1d(self)
+        _plot_1d_err(self, 'ode3_var', 5)
 
 
 def _plot_1d_fourier(problem, left_bdy=True, right_bdy=True):
@@ -658,6 +862,7 @@ def _plot_1d_fourier(problem, left_bdy=True, right_bdy=True):
         ))
         plt.close()
 
+
 class ODE1Fourier(Problem):
     def get_name(self):
         return 'ode1_fourier'
@@ -671,15 +876,16 @@ class ODE1Fourier(Problem):
                 root=self.input_path(f'n_{i}'),
                 base_command=base_cmd,
                 modes=i, samples=20,
-                n_train=5000,
-                lr=1e-3,
-                tol=1e-4
+                n_train=100000,
+                lr=1e-4,
+                tol=1e-6
             )
             for i in (10,)
         ]
 
     def run(self):
         _plot_1d_fourier(self)
+        _plot_1d_err(self, 'ode1_fourier', 10)
 
 
 class ODE3Fourier(Problem):
@@ -695,15 +901,16 @@ class ODE3Fourier(Problem):
                 root=self.input_path(f'n_{i}'),
                 base_command=base_cmd,
                 modes=i, samples=50,
-                n_train=5000,
-                lr=5e-3,
-                tol=1e-2
+                n_train=100000,
+                lr=1e-4,
+                tol=1e-6
             )
             for i in (50,)
         ]
 
     def run(self):
         _plot_1d_fourier(self)
+        _plot_1d_err(self, 'ode3_fourier', 50)
 
 
 class ODE3Comp(Problem):
@@ -1701,8 +1908,10 @@ if __name__ == '__main__':
     PROBLEMS = [
         Misc,
         ODE1, ODE2, ODE3,
+        ODE1Conv1, ODE1Conv3, ODE1Conv7,
         ODE3Conv1, ODE3Conv3,
         ODE2Conv5,
+        ODE2Rep5,
         ODE1Var, ODE3Var,
         ODE1Fourier, ODE3Fourier,
         ODE3Comp,

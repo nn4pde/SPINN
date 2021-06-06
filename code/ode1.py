@@ -2,6 +2,7 @@
 # with Dirichlet boundar conditions u(0) = u(1) = 0.
 
 import numpy as np
+import torch
 
 from common import tensor
 from spinn1d import Plotter1D, SPINN1D, App1D
@@ -22,6 +23,7 @@ class ODESimple(BasicODE):
         ub = tensor(self.exact(self.xbn))
         bc = u - ub
         return (bc**2).sum()
+        # return torch.abs(bc).max()
 
     def plot_points(self):
         n = 25
