@@ -98,7 +98,7 @@ def plot_solution_nodes(plot_data, state, fname):
     mlab.close()
 
 
-def plot_3d_solution(plot_data, fname, warp_scale=0.5):
+def plot_3d_solution(plot_data, warp_scale=0.5):
     sd = plot_data
     f = _mlab_figure()
     s = mlab.surf(sd['x'], sd['y'], sd['u'], warp_scale=warp_scale,
@@ -108,8 +108,7 @@ def plot_3d_solution(plot_data, fname, warp_scale=0.5):
                    color=(0, 0, 0))
     mlab.outline(s)
     mlab.axes(s, xlabel='x', ylabel='t', zlabel='u')
-    mlab.savefig(fname)
-    mlab.close()
+    s.scene.isometric_view()
 
 
 def plot_ug_solution(vtu, u):
@@ -1810,22 +1809,30 @@ class TimeVarying(Problem):
         plt.savefig(fname)
         plt.close()
 
-    def _plot_3d(self, st_case, warp_scale=0.5):
+    def _plot_3d(self, st_case, warp_scale=0.5, cb=None):
         sd = np.load(st_case.input_path('results.npz'))
         sd = dict(x=sd['xp'], y=sd['yp'], u=sd['up'], u_exact=sd['uex_p'])
         fname = self.output_path('st_sol.png')
-        plot_3d_solution(sd, fname, warp_scale)
+        plot_3d_solution(sd, warp_scale)
+        if cb:  # Callback to make some corrections
+            cb()
+        mlab.savefig(fname)
+        mlab.close()
 
-    def _plot_centers(self, st_case):
+    def _plot_centers(self, st_case, xlabel='x', ylabel='y', cb=None):
         pth = Path(st_case.input_path('model.pt'))
         nn_state = torch.load(str(pth))
         x = nn_state['layer1.x']
         y = nn_state['layer1.y']
         w = nn_state['layer1.h']
         plot_centers(x, y, w)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
         plt.xlim(-0.25, 1.25)
         plt.axis('equal')
         plt.tight_layout()
+        if cb:
+            cb()
         fname = self.output_path('centers_st.pdf')
         plt.savefig(fname)
         plt.close()
@@ -1847,7 +1854,7 @@ class Heat(TimeVarying):
                 nodes=i, samples=200,
                 n_train=5000,
                 lr=1e-3,
-                tol=2e-5,
+                tol=4e-2,
                 dt=0.0025,
                 t_skip=4,
                 duration=0.2,
@@ -1863,8 +1870,8 @@ class Heat(TimeVarying):
                 base_command=base_cmd,
                 nodes=100, samples=400,
                 n_train=10000,
-                lr=1e-2,
-                tol=2e-5,
+                lr=1e-3,
+                tol=5e-4,
                 duration=0.5,
                 activation='gaussian',
                 sample_frac=1.0,
@@ -1878,8 +1885,15 @@ class Heat(TimeVarying):
         st_case = self.st_cases[0]
         times = [0.01, 0.05, 0.1, 0.2]
         self._plot_solution(case, st_case, times)
-        self._plot_3d(st_case)
-        self._plot_centers(st_case)
+
+        def _adjust():
+            mlab.move(right=-0.15, up=-0.05)
+
+        self._plot_3d(st_case, cb=_adjust)
+        self._plot_centers(st_case, xlabel=r'$x$', ylabel=r'$t$')
+        times.insert(0, 0.0)
+        data, models = get_results(case, times)
+        self._plot_fd_centers(models, times)
 
 
 class Advection(TimeVarying):

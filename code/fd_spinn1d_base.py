@@ -154,6 +154,7 @@ class AppFD1D(App1D):
             if not os.path.exists(out_dir):
                 os.makedirs(out_dir)
                 print("Saving output to", out_dir)
+            self.plotter.save(out_dir)
 
         for itr in range(n_itr):
             self.solver.solve()
@@ -167,4 +168,5 @@ class AppFD1D(App1D):
                 if out_dir is not None:
                     self.plotter.save(out_dir)
 
-        plt.show()
+        if self.solver.plot:
+            plt.show()
