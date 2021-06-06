@@ -1468,6 +1468,7 @@ class Cavity(Problem):
     def plot_comparison(self):
         xg, vg, yg, ug = self.get_ghia_data()
 
+        matplotlib.rc('font', **font)
         f1, ax1 = plt.subplots(figsize=(12, 12))
         f2, ax2 = plt.subplots(figsize=(12, 12))
         ax1.plot(ug, yg, 'o', color='red', label='Ghia et al.')
@@ -1538,6 +1539,7 @@ class CavityPySPH(PySPHProblem):
         self.make_output_dir()
         fname = os.path.join('code', 'data', 'ghia_re_100.txt')
         xg, vg, yg, ug = np.loadtxt(fname, unpack=True)
+        matplotlib.rc('font', **font)
         f1, ax1 = plt.subplots(figsize=(12, 12))
         f2, ax2 = plt.subplots(figsize=(12, 12))
 
