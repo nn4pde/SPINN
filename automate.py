@@ -271,6 +271,30 @@ class ODE3(Problem):
         _plot_1d(self)
 
 
+class ODE4(Problem):
+    def get_name(self):
+        return 'ode4'
+
+    def setup(self):
+        base_cmd = (
+            'python3 code/ode4.py -d $output_dir '
+        )
+        self.cases = [
+            Simulation(
+                root=self.input_path(f'n_{i}'),
+                base_command=base_cmd,
+                nodes=i, samples=8*i,
+                n_train=20000,
+                lr=5e-4,
+                tol=1e-3
+            )
+            for i in (100,)
+        ]
+
+    def run(self):
+        _plot_1d(self)
+
+
 def _plot_ode_conv(problem, n_nodes, pname='ode',
                    left_bdy=True, right_bdy=True):
     problem.make_output_dir()
@@ -521,6 +545,34 @@ class ODE3Conv3(Problem):
 
     def run(self):
         _plot_ode_conv(self, self.n, 'ode3')
+
+
+class ODE4Conv100(Problem):
+    def get_name(self):
+        return 'ode4_conv_100'
+
+    def setup(self):
+        self.n = 100
+        self.ns = 8*self.n
+
+        base_cmd = (
+            'python3 code/ode4.py -d $output_dir'
+        )
+        self.cases = [
+            Simulation(
+                root=self.input_path(f'{activation}_n_{self.n}'),
+                base_command=base_cmd,
+                nodes=self.n, samples=self.ns,
+                n_train=20000, n_skip=1,
+                lr=5e-4,
+                tol=1e-3,
+                activation=activation
+            )
+            for activation in ('kernel', 'softplus', 'gaussian')
+        ]
+
+    def run(self):
+        _plot_ode_conv(self, self.n, 'ode4')
 
 
 def _plot_ode_conv_sampling(problem, n_nodes, pname='ode',
@@ -910,6 +962,31 @@ class ODE3Fourier(Problem):
     def run(self):
         _plot_1d_fourier(self)
         _plot_1d_err(self, 'ode3_fourier', 50)
+
+
+class ODE4Fourier(Problem):
+    def get_name(self):
+        return 'ode4_fourier'
+
+    def setup(self):
+        base_cmd = (
+            'python3 code/ode4_fourier.py -d $output_dir '
+        )
+        self.cases = [
+            Simulation(
+                root=self.input_path(f'n_{i}'),
+                base_command=base_cmd,
+                modes=i, samples=800,
+                n_train=20000,
+                lr=5e-4,
+                tol=1e-4
+            )
+            for i in (200,)
+        ]
+
+    def run(self):
+        _plot_1d_fourier(self)
+        _plot_1d_err(self, 'ode4_fourier', 100)
 
 
 class ODE3Comp(Problem):
@@ -1969,13 +2046,14 @@ class Advection(TimeVarying):
 if __name__ == '__main__':
     PROBLEMS = [
         Misc,
-        ODE1, ODE2, ODE3,
+        ODE1, ODE2, ODE3, ODE4,
         ODE1Conv1, ODE1Conv3, ODE1Conv7,
         ODE3Conv1, ODE3Conv3,
+        ODE4Conv100,
         ODE2Conv5,
         ODE2Rep5,
         ODE1Var, ODE3Var,
-        ODE1Fourier, ODE3Fourier,
+        ODE1Fourier, ODE3Fourier, ODE4Fourier,
         ODE3Comp,
         Poisson2DSineConv,
         Poisson2DSineNodes,
