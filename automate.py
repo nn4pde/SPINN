@@ -1686,7 +1686,7 @@ def get_results(case, times):
     return result, models
 
 
-def plot_fd_centers(problem, models, times):
+def plot_fd_centers(problem, models, times, fname='centers_fd.pdf'):
     figure()
     for t, model in zip(times, models):
         x = model['layer1.center'].numpy()
@@ -1694,8 +1694,8 @@ def plot_fd_centers(problem, models, times):
     plt.xlabel(r'$x$')
     plt.ylabel(r'$t$')
     plt.grid()
-    fname = problem.output_path('centers_fd.pdf')
-    plt.savefig(fname)
+    ofn = problem.output_path(fname)
+    plt.savefig(ofn)
 
 
 class BurgersFD(Problem):
@@ -1784,7 +1784,7 @@ class BurgersFD(Problem):
         plt.savefig(fname)
         plt.close()
 
-    def _make_plots(self, cases, exact, kind):
+    def _make_plots(self, cases, exact, kind, center_idx=-1):
         for case in cases:
             pth = sorted(Path(case.input_path()).glob('model_*.pt'))
             nn_state = torch.load(str(pth[0]))
@@ -1792,15 +1792,17 @@ class BurgersFD(Problem):
             self._plot_solution(case, nodes, exact, kind)
 
         times = [0.1, 0.3, 0.6, 1.0]
-        case = self.cases[1]
+        case = cases[center_idx]
         data, models = get_results(case, times)
-        plot_fd_centers(self, models, times)
+        fname = kind + '_centers_fd.pdf'
+        plot_fd_centers(self, models, times, fname)
 
     def run(self):
         self.make_output_dir()
         fname = os.path.join('code', 'data', 'pyclaw_burgers1d_sine2.npz')
         exact = np.load(fname)
-        self._make_plots(self.sin2_cases, exact, 'sin2')
+        self._make_plots(self.sin2_cases, exact, 'sin2', 1)
+
         fname = os.path.join('code', 'data', 'pyclaw_burgers1d_sine.npz')
         exact = np.load(fname)
         self._make_plots(self.sin_cases, exact, 'sin')
