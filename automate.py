@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 import os
 from pathlib import Path
+import sys
 
 from automan.api import Problem, PySPHProblem
-from automan.api import Automator, Simulation
+from automan.api import Automator, Simulation, filter_cases
 import numpy as np
 import torch
 import matplotlib
@@ -11,6 +12,7 @@ from mayavi import mlab
 matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 mlab.options.offscreen = True
+sys.path.append(os.path.join(os.path.dirname(__file__), 'code'))
 
 USE_GPU = False
 
@@ -143,6 +145,15 @@ def hat_softplus_2d(x, y):
         1.0 + 4.0*np.log(2.0) - softplus(x) - softplus(-x)
         - softplus(y) - softplus(-y)
     )/softplus(1.0)
+
+
+def get_kernel1d(state, kernel_size=5):
+    d = {k[11:]: v for k, v in state.items()
+         if k.startswith('activation.')}
+    from spinn1d import Kernel
+    k = Kernel(kernel_size)
+    k.load_state_dict(d)
+    return k
 
 
 class Misc(Problem):
@@ -459,8 +470,22 @@ class ODE1Conv3(Problem):
             for activation in ('kernel', 'softplus', 'gaussian')
         ]
 
+    def _plot_kernel(self):
+        case = filter_cases(self.cases, activation='kernel')[0]
+        state = torch.load(case.input_path('model.pt'))
+        kernel = get_kernel1d(state)
+        x = torch.linspace(-5.0, 5.0, 200)
+        y = kernel.forward(x)
+        figure()
+        plt.plot(x, y.detach())
+        plt.ylabel(r'$\phi_{NN}$')
+        plt.xlabel(r'$x$')
+        plt.savefig(self.output_path('kernel.pdf'))
+        plt.close()
+
     def run(self):
         _plot_ode_conv(self, self.n, 'ode1')
+        self._plot_kernel()
 
 
 class ODE1Conv7(Problem):
@@ -1685,9 +1710,9 @@ class BurgersFD(Problem):
             'python3 code/burgers1d_fd_spinn.py -d $output_dir '
         )
 
-        self.cases = [
+        self.sin2_cases = [
             Simulation(
-                root=self.input_path(f'{activation}_n{i}'),
+                root=self.input_path(f'sin2_{activation}_n{i}'),
                 base_command=base_cmd,
                 nodes=i, samples=400,
                 n_train=5000,
@@ -1700,7 +1725,27 @@ class BurgersFD(Problem):
             for i in (20, 40, 80) for activation in ('gaussian',)
         ]
 
-    def _plot_solution(self, case, nodes, exact):
+        base_cmd = (
+            'python3 code/burgers1d_fd_spinn2.py -d $output_dir '
+        )
+
+        self.sin_cases = [
+            Simulation(
+                root=self.input_path(f'sin_{activation}_n{i}'),
+                base_command=base_cmd,
+                nodes=i, samples=600,
+                n_train=10000,
+                lr=1e-4,
+                tol=1e-7,
+                dt=0.005,
+                activation=activation,
+                sample_frac=1.0,
+            )
+            for i in (100, 150) for activation in ('gaussian',)
+        ]
+        self.cases = self.sin2_cases + self.sin_cases
+
+    def _plot_solution(self, case, nodes, exact, kind):
         data, models = get_results(case, [0.1, 0.3, 0.6, 1.0])
         colors = ['violet', 'blue', 'green', 'red']
         x_ex = exact['x']
@@ -1712,41 +1757,53 @@ class BurgersFD(Problem):
             res = data[count]
             plt.plot(
                 res['x'], res['y'], 'o-', color=colors[count],
-                markevery=10, markersize=8, linewidth=4,
+                markevery=10, markersize=8, linewidth=8,
                 label='SPINN (t=%.1f)' % t
             )
             label = 'PyClaw' if i == 10 else None
+            shift = 0.5 if kind == 'sin2' else 0.0
             plt.plot(
-                x_ex + 0.5, u_ex[i], '--',
-                linewidth=6, color='black',
+                x_ex + shift, u_ex[i], '--',
+                linewidth=4, color='black',
                 label=label
             )
         plt.xlabel(r'$x$', fontsize=24)
         plt.ylabel(r'$u(x)$', fontsize=24)
         plt.legend(loc='upper right')
         plt.grid()
-        plt.xlim(0.0, 1.0)
-        plt.ylim(-1.15, 1.5)
+        if kind == 'sin2':
+            plt.xlim(0.0, 1.0)
+            plt.ylim(-1.15, 1.5)
+        else:
+            plt.xlim(-1.0, 1.0)
+            plt.ylim(-0.15, 1.5)
+
         fname = self.output_path(
-            '%s_n%d.pdf' % (case.params['activation'], nodes)
+            '%s_%s_n%d.pdf' % (kind, case.params['activation'], nodes)
         )
         plt.savefig(fname)
         plt.close()
 
-    def run(self):
-        self.make_output_dir()
-        fname = os.path.join('code', 'data', 'pyclaw_burgers1d_sine2.npz')
-        exact = np.load(fname)
-        for case in self.cases:
+    def _make_plots(self, cases, exact, kind):
+        for case in cases:
             pth = sorted(Path(case.input_path()).glob('model_*.pt'))
             nn_state = torch.load(str(pth[0]))
             nodes = self._n_nodes(nn_state)
-            self._plot_solution(case, nodes, exact)
+            self._plot_solution(case, nodes, exact, kind)
 
         times = [0.1, 0.3, 0.6, 1.0]
         case = self.cases[1]
         data, models = get_results(case, times)
         plot_fd_centers(self, models, times)
+
+    def run(self):
+        self.make_output_dir()
+        fname = os.path.join('code', 'data', 'pyclaw_burgers1d_sine2.npz')
+        exact = np.load(fname)
+        self._make_plots(self.sin2_cases, exact, 'sin2')
+        fname = os.path.join('code', 'data', 'pyclaw_burgers1d_sine.npz')
+        exact = np.load(fname)
+        self._make_plots(self.sin_cases, exact, 'sin')
 
 
 class BurgersST(Problem):
@@ -1758,66 +1815,79 @@ class BurgersST(Problem):
 
     def setup(self):
         base_cmd = (
-            'python3 code/burgers1d.py -d $output_dir --ic sin '
+            'python3 code/burgers1d.py -d $output_dir '
         )
 
-        self.cases = [
+        kwargs = dict(gpu=None) if USE_GPU else {}
+
+        self.sin_cases = [
             Simulation(
-                root=self.input_path(f'{activation}_n{i}'),
+                root=self.input_path(f'sin_{activation}_n{i}'),
                 base_command=base_cmd,
                 nodes=i, samples=i*5,
                 n_train=10000,
+                ic='sin',
                 lr=2e-3,
                 tol=1e-3,
                 duration=1.0,
                 activation=activation,
                 sample_frac=1.0,
-                viscosity=0.0
+                **kwargs
             )
-            for i in (50, 100, 200, 400) for activation in ('gaussian',)
+            for i in (200, 400, 800) for activation in ('gaussian',)
         ]
-        self.cases.extend([
+
+        self.sin2_cases = [
             Simulation(
-                root=self.input_path(f'{activation}_n_100'),
+                root=self.input_path(f'sin2_gaussian_n_{i}'),
                 base_command=base_cmd,
-                nodes=100, samples=500,
+                nodes=i, samples=i*5,
                 n_train=10000,
+                ic='sin2',
                 lr=1e-3,
-                activation=activation,
+                activation='gaussian',
                 kernel_size=5,
-                sample_frac=1.0
+                sample_frac=1.0,
+                **kwargs
             )
-            for activation in ('kernel', 'nnkernel')
-        ])
+            for i in (200, 400, 800)
+        ]
+        self.cases = self.sin_cases + self.sin2_cases
 
     def _plot_solution(self, case, nodes, exact):
         res = np.load(case.input_path('results.npz'))
         x, t = res['x'], res['t']
         u = res['u']
-        colors = ['black', 'blue', 'green', 'violet']
+        colors = ['violet', 'blue', 'green', 'red']
         x_ex = exact['x']
         u_ex = exact['u']
         figure()
 
         for count, i in enumerate((0, 3, 6, 10)):
             plt.plot(
-                x_ex, u_ex[i],
-                linewidth=4, color=colors[count],
-                label='Exact (t=%.1f)' % t[0, i]
+                x[:, i], u[:, i], 'o-', color=colors[count],
+                linewidth=8, label='SPINN (t=%.1f)' % t[0, i]
+
             )
-            label = 'SPINN' if i == 10 else None
+            label = 'PyClaw' if i == 10 else None
             plt.plot(
-                x[:, i], u[:, i], '--', color='red',
-                linewidth=4, label=label
+                x_ex, u_ex[i], '--',
+                linewidth=4, color='black',
+                label=label
             )
         plt.xlabel(r'$x$', fontsize=24)
         plt.ylabel(r'$u(x)$', fontsize=24)
         plt.legend(loc='upper left')
         plt.grid()
         plt.xlim(-1.0, 1.0)
-        plt.ylim(-0.25, 1.5)
+        if case.params['ic'] == 'sin':
+            plt.ylim(-0.25, 1.5)
+        else:
+            plt.ylim(-1.25, 1.5)
+
         fname = self.output_path(
-            '%s_n%d.pdf' % (case.params['activation'], nodes)
+            '%s_%s_n%d.pdf' % (case.params['ic'],
+                               case.params['activation'], nodes)
         )
         plt.savefig(fname)
         plt.close()
@@ -1828,17 +1898,23 @@ class BurgersST(Problem):
         sdata = dict(x=sd['xp'], y=sd['tp'], u=sd['up'])
         plot_solution_nodes(sdata, state, fname)
 
-    def run(self):
-        self.make_output_dir()
-        fname = os.path.join('code', 'data', 'pyclaw_burgers1d_sine.npz')
-        exact = np.load(fname)
-        for case in self.cases:
+    def _make_plots(self, cases, exact):
+        for case in cases:
             nn_state = torch.load(case.input_path('model.pt'))
             nodes = self._n_nodes(nn_state)
             self._plot_solution(case, nodes, exact)
             self._plot_solution_nodes(
                 case, self.output_path('%s_centers.png' % case.name)
             )
+
+    def run(self):
+        self.make_output_dir()
+        fname = os.path.join('code', 'data', 'pyclaw_burgers1d_sine.npz')
+        exact = np.load(fname)
+        self._make_plots(self.sin_cases, exact)
+        fname = os.path.join('code', 'data', 'pyclaw_burgers1d_sine2.npz')
+        exact = np.load(fname)
+        self._make_plots(self.sin2_cases, exact)
 
 
 class TimeVarying(Problem):
