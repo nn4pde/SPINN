@@ -388,7 +388,8 @@ class ODE4PINN(Problem):
 
 
 def _plot_ode_conv(problem, n_nodes, pname='ode',
-                   left_bdy=True, right_bdy=True):
+                   left_bdy=True, right_bdy=True,
+                   n_skip=1):
     problem.make_output_dir()
 
     L1s = []
@@ -450,7 +451,8 @@ def _plot_ode_conv(problem, n_nodes, pname='ode',
     plt.yscale('log')
 
     for i in range(len(acts)):
-        plt.plot(L1s[i], '-', linewidth=4, label=f'{acts[i]}')
+        iters = np.arange(len(L1s[i]))*n_skip
+        plt.plot(iters, L1s[i], '-', linewidth=4, label=f'{acts[i]}')
 
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_1$ error')
@@ -468,7 +470,8 @@ def _plot_ode_conv(problem, n_nodes, pname='ode',
     plt.yscale('log')
 
     for i in range(len(acts)):
-        plt.plot(L2s[i], '-', linewidth=4, label=f'{acts[i]}')
+        iters = np.arange(len(L2s[i]))*n_skip
+        plt.plot(iters, L2s[i], '-', linewidth=4, label=f'{acts[i]}')
 
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_2$ error')
@@ -486,7 +489,8 @@ def _plot_ode_conv(problem, n_nodes, pname='ode',
     plt.yscale('log')
 
     for i in range(len(acts)):
-        plt.plot(Linfs[i], '-', linewidth=4, label=f'{acts[i]}')
+        iters = np.arange(len(Linfs[i]))*n_skip
+        plt.plot(iters, Linfs[i], '-', linewidth=4, label=f'{acts[i]}')
 
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_{\infty}$ error')
@@ -524,7 +528,7 @@ class ODE1Conv1(Problem):
         ]
 
     def run(self):
-        _plot_ode_conv(self, self.n, 'ode1')
+        _plot_ode_conv(self, self.n, 'ode1', n_skip=100)
 
 
 class ODE1Conv3(Problem):
@@ -566,7 +570,7 @@ class ODE1Conv3(Problem):
         plt.close()
 
     def run(self):
-        _plot_ode_conv(self, self.n, 'ode1')
+        _plot_ode_conv(self, self.n, 'ode1', n_skip=100)
         self._plot_kernel()
 
 
@@ -595,7 +599,7 @@ class ODE1Conv7(Problem):
         ]
 
     def run(self):
-        _plot_ode_conv(self, self.n, 'ode1')
+        _plot_ode_conv(self, self.n, 'ode1', n_skip=100)
 
 
 class ODE3Conv1(Problem):
@@ -623,7 +627,7 @@ class ODE3Conv1(Problem):
         ]
 
     def run(self):
-        _plot_ode_conv(self, self.n, 'ode3')
+        _plot_ode_conv(self, self.n, 'ode3', n_skip=1)
 
 
 class ODE3Conv3(Problem):
@@ -651,7 +655,7 @@ class ODE3Conv3(Problem):
         ]
 
     def run(self):
-        _plot_ode_conv(self, self.n, 'ode3')
+        _plot_ode_conv(self, self.n, 'ode3', n_skip=1)
 
 
 class ODE4Conv100(Problem):
@@ -679,7 +683,7 @@ class ODE4Conv100(Problem):
         ]
 
     def run(self):
-        _plot_ode_conv(self, self.n, 'ode4')
+        _plot_ode_conv(self, self.n, 'ode4', n_skip=1)
 
 
 def _plot_ode_conv_sampling(problem, n_nodes, pname='ode',
@@ -1209,7 +1213,7 @@ class ODE3Comp(Problem):
         plt.close()
 
 
-def _plot_pde_conv(problem, n_nodes):
+def _plot_pde_conv(problem, n_nodes, n_skip=1):
     problem.make_output_dir()
 
     L1s = []
@@ -1248,7 +1252,8 @@ def _plot_pde_conv(problem, n_nodes):
     plt.yscale('log')
 
     for i in range(len(acts)):
-        plt.plot(L1s[i], '-', linewidth=4, label=f'{acts[i]}')
+        iters = np.arange(len(L1s[i]))*n_skip
+        plt.plot(iters, L1s[i], '-', linewidth=4, label=f'{acts[i]}')
 
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_1$ error')
@@ -1264,7 +1269,8 @@ def _plot_pde_conv(problem, n_nodes):
     plt.yscale('log')
 
     for i in range(len(acts)):
-        plt.plot(L2s[i], '-', linewidth=4, label=f'{acts[i]}')
+        iters = np.arange(len(L2s[i]))*n_skip
+        plt.plot(iters, L2s[i], '-', linewidth=4, label=f'{acts[i]}')
 
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_2$ error')
@@ -1280,7 +1286,8 @@ def _plot_pde_conv(problem, n_nodes):
     plt.yscale('log')
 
     for i in range(len(acts)):
-        plt.plot(Linfs[i], '-', linewidth=4, label=f'{acts[i]}')
+        iters = np.arange(len(Linfs[i]))*n_skip
+        plt.plot(iters, Linfs[i], '-', linewidth=4, label=f'{acts[i]}')
 
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_{\infty}$ error')
@@ -1319,10 +1326,10 @@ class Poisson2DSineConv(Problem):
         ]
 
     def run(self):
-        _plot_pde_conv(self, self.n)
+        _plot_pde_conv(self, self.n, n_skip=10)
 
 
-def _plot_pde_conv_nodes(problem):
+def _plot_pde_conv_nodes(problem, n_skip=1):
     problem.make_output_dir()
 
     L1s = []
@@ -1361,7 +1368,8 @@ def _plot_pde_conv_nodes(problem):
     plt.yscale('log')
 
     for i in range(len(n_nodes)):
-        plt.plot(L1s[i], '-', linewidth=4, label=f'n~{n_nodes[i]}')
+        iters = np.arange(len(L1s[i]))*n_skip
+        plt.plot(iters, L1s[i], '-', linewidth=4, label=f'n~{n_nodes[i]}')
 
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_1$ error')
@@ -1377,7 +1385,8 @@ def _plot_pde_conv_nodes(problem):
     plt.yscale('log')
 
     for i in range(len(n_nodes)):
-        plt.plot(L2s[i], '-', linewidth=4, label=f'n~{n_nodes[i]}')
+        iters = np.arange(len(L2s[i]))*n_skip
+        plt.plot(iters, L2s[i], '-', linewidth=4, label=f'n~{n_nodes[i]}')
 
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_2$ error')
@@ -1393,7 +1402,8 @@ def _plot_pde_conv_nodes(problem):
     plt.yscale('log')
 
     for i in range(len(n_nodes)):
-        plt.plot(Linfs[i], '-', linewidth=4, label=f'n~{n_nodes[i]}')
+        iters = np.arange(len(Linfs[i]))*n_skip
+        plt.plot(iters, Linfs[i], '-', linewidth=4, label=f'n~{n_nodes[i]}')
 
     plt.xlabel('Iterations')
     plt.ylabel(r'$L_{\infty}$ error')
@@ -1429,7 +1439,7 @@ class Poisson2DSineNodes(Problem):
         ]
 
     def run(self):
-        _plot_pde_conv_nodes(self)
+        _plot_pde_conv_nodes(self, n_skip=10)
 
 
 def _plot_pde_conv_nodes_fem(problem):
@@ -1501,7 +1511,7 @@ class SquareSlit(Problem):
                 root=self.input_path(f'n_{n}'),
                 base_command=base_cmd,
                 nodes=n, samples=3*n,
-                n_train=10000, n_skip=100,
+                n_train=10000, n_skip=1,
                 lr=1e-3,
                 tol=1e-4,
                 activation='softplus',
