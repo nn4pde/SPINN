@@ -306,6 +306,87 @@ class ODE4(Problem):
         _plot_1d(self)
 
 
+class ODE4PINN(Problem):
+    def get_name(self):
+        return 'ode4_pinn'
+
+    def setup(self):
+        spinn_cmd = 'python3 code/ode4.py -d $output_dir '
+        pinn_cmd = 'python3 code/ode4_pinn.py -d $output_dir '
+        self.cases = [
+            Simulation(
+                root=self.input_path('spinn'),
+                base_command=spinn_cmd,
+                nodes=100, samples=800,
+                n_train=20000,
+                lr=5e-4,
+                tol=1e-3
+            ),
+            Simulation(
+                root=self.input_path('pinn'),
+                base_command=pinn_cmd,
+                layers=5, neurons=200,
+                samples=2000,
+                n_train=20000,
+                sample_frac=0.25,
+                lr=5e-4,
+                tol=1e-3
+            )
+        ]
+
+    def _plot_solution(self):
+        figure()
+        scase, pcase = self.cases
+        sres = np.load(scase.input_path('results.npz'))
+        pres = np.load(pcase.input_path('results.npz'))
+        plt.plot(
+            sres['x'], sres['y'], color='red',
+            linewidth=6, label='SPINN'
+        )
+        plt.plot(
+            pres['x'], pres['y'], color='blue',
+            linewidth=6, label='PINN'
+        )
+        plt.plot(
+            sres['x'], sres['y_exact'], '--', color='black',
+            linewidth=4, label='Exact'
+        )
+        plt.xlabel(r'$x$')
+        plt.ylabel(r'$u(x)$')
+        plt.legend()
+        plt.grid()
+        plt.savefig(self.output_path('compare.pdf'))
+        plt.close()
+
+    def _plot_linf(self):
+        nskip = 100
+        figure()
+        scase, pcase = self.cases
+        sres = np.load(scase.input_path('solver.npz'))
+        pres = np.load(pcase.input_path('solver.npz'))
+        linf = sres['error_Linf']
+        plt.loglog(
+            np.arange(len(linf))*nskip, linf, linewidth=4,
+            label='SPINN'
+        )
+        linf = pres['error_Linf']
+        plt.loglog(
+            np.arange(len(linf))*nskip, linf, linewidth=4,
+            label='PINN'
+        )
+        plt.xlabel('Iterations')
+        plt.ylabel(r'$L_{\infty}$ error')
+        plt.grid()
+        plt.legend()
+        plt.savefig(self.output_path('linf_error.pdf'))
+        plt.close()
+
+    def run(self):
+        self.make_output_dir()
+        self._plot_solution()
+        self._plot_linf()
+
+
 def _plot_ode_conv(problem, n_nodes, pname='ode',
                    left_bdy=True, right_bdy=True):
     problem.make_output_dir()
@@ -2201,6 +2282,7 @@ if __name__ == '__main__':
         ODE1Conv1, ODE1Conv3, ODE1Conv7,
         ODE3Conv1, ODE3Conv3,
         ODE4Conv100,
+        ODE4PINN,
         ODE2Conv5,
         ODE2Rep5,
         ODE1Var, ODE3Var,

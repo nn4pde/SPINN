@@ -28,7 +28,7 @@ class ODE4(BasicODE):
         u = nn(self.boundary())
         ub = tensor(self.exact(self.xbn))
         bc = u - ub
-        return 10*(bc**2).sum()
+        return 1000*(bc**2).sum()
 
     def plot_points(self):
         n = 800
@@ -43,4 +43,4 @@ if __name__ == '__main__':
         plotter_cls=Plotter1D
     )
     app.run(nodes=100, samples=800, n_train=20000,
-            lr=2e-3, tol=1e-3)
+            lr=5e-4, tol=1e-3)
