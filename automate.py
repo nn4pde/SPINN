@@ -474,13 +474,14 @@ class ODE1Conv3(Problem):
         case = filter_cases(self.cases, activation='kernel')[0]
         state = torch.load(case.input_path('model.pt'))
         kernel = get_kernel1d(state)
-        x = torch.linspace(-5.0, 5.0, 200)
+        x = torch.linspace(-10.0, 10.0, 500)
         y = kernel.forward(x)
         figure()
-        plt.plot(x, y.detach())
-        plt.ylabel(r'$\phi_{NN}$')
-        plt.xlabel(r'$x$')
+        plt.plot(x, y.detach(), 'b-', linewidth=6)
+        plt.ylabel(r'$\varphi_{NN}$', fontsize=24)
+        plt.xlabel(r'$x$', fontsize=24)
         plt.savefig(self.output_path('kernel.pdf'))
+        plt.grid()
         plt.close()
 
     def run(self):
@@ -1227,7 +1228,7 @@ class Poisson2DSineConv(Problem):
                 root=self.input_path(f'{activation}_n_{self.n}'),
                 base_command=base_cmd,
                 nodes=self.n, samples=self.ns,
-                n_train=25000, n_skip=1,
+                n_train=50000, n_skip=10,
                 lr=1e-3,
                 tol=1e-3,
                 activation=activation,
@@ -1337,7 +1338,7 @@ class Poisson2DSineNodes(Problem):
                 root=self.input_path(f'n_{n}'),
                 base_command=base_cmd,
                 nodes=n, samples=4*n,
-                n_train=20000, n_skip=1,
+                n_train=50000, n_skip=10,
                 lr=1e-3,
                 tol=1e-3,
                 activation='softplus',
