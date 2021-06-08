@@ -1699,6 +1699,78 @@ def plot_fd_centers(problem, models, times, fname='centers_fd.pdf'):
     plt.savefig(ofn)
 
 
+class AllenCahn(Problem):
+    def get_name(self):
+        return 'allen_cahn'
+
+    def _n_nodes(self, nn_state):
+        return len(nn_state['layer1.center'])
+
+    def setup(self):
+        base_cmd = (
+            'python3 code/allen_cahn_fd.py -d $output_dir '
+        )
+
+        self.cases = [
+            Simulation(
+                root=self.input_path('n_100'),
+                base_command=base_cmd,
+                nodes=100, samples=500,
+                n_train=5000,
+                lr=1e-3,
+                tol=1e-6,
+                dt=0.005,
+                sample_frac=1.0,
+            )
+        ]
+
+    def _plot_solution(self, case, exact):
+        times = [0.1, 0.3, 0.6, 0.9]
+        data, models = get_results(case, times)
+        colors = ['violet', 'blue', 'green', 'red']
+        dt = exact['tt'][0, 1]
+        indices = [int(t/dt) for t in times]
+        x_ex = exact['x'][0]
+        t_ex = exact['tt'][0]
+        u_ex = exact['uu']
+        figure()
+
+        for count, t in enumerate(times):
+            res = data[count]
+            plt.plot(
+                res['x'], res['y'], 'o-', color=colors[count],
+                markevery=10, markersize=8, linewidth=8,
+                label='SPINN (t=%.1f)' % t
+            )
+            label = 'Exact' if count == 3 else None
+            plt.plot(
+                x_ex, u_ex[:, indices[count]], '--',
+                linewidth=4, color='black',
+                label=label
+            )
+        plt.xlabel(r'$x$', fontsize=24)
+        plt.ylabel(r'$u(x)$', fontsize=24)
+        plt.legend(loc='upper right')
+        plt.grid()
+        plt.xlim(-1.0, 1.0)
+        plt.ylim(-1.15, 1.5)
+
+        fname = self.output_path('comparison.pdf')
+        plt.savefig(fname)
+        plt.close()
+
+    def _make_plots(self, cases, exact):
+        for case in cases:
+            self._plot_solution(case, exact)
+
+    def run(self):
+        from scipy.io import loadmat
+        self.make_output_dir()
+        fname = os.path.join('code', 'data', 'AC.mat')
+        exact = loadmat(fname)
+        self._make_plots(self.cases, exact)
+
+
 class BurgersFD(Problem):
     def get_name(self):
         return 'burgers_fd'
@@ -1837,7 +1909,7 @@ class BurgersST(Problem):
                 sample_frac=1.0,
                 **kwargs
             )
-            for i in (200, 400, 800) for activation in ('gaussian',)
+            for i in (200, 400) for activation in ('gaussian',)
         ]
 
         self.sin2_cases = [
@@ -1853,7 +1925,7 @@ class BurgersST(Problem):
                 sample_frac=1.0,
                 **kwargs
             )
-            for i in (200, 400, 800)
+            for i in (200, 400)
         ]
         self.cases = self.sin_cases + self.sin2_cases
 
@@ -2143,7 +2215,8 @@ if __name__ == '__main__':
         BurgersST,
         Heat,
         Cavity,
-        CavityPySPH
+        CavityPySPH,
+        AllenCahn
     ]
     automator = Automator(
         simulation_dir='outputs',
