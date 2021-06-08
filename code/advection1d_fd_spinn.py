@@ -58,4 +58,4 @@ if __name__ == '__main__':
         plotter_cls=FDPlotter1D
     )
     app.run(nodes=20, samples=500, dt=0.0025,
-            tol=1e-4, lr=1e-4, n_train=5000)
+            tol=1e-6, lr=1e-4, n_train=5000)

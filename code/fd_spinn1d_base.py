@@ -14,6 +14,23 @@ class FDPlotter1D(Plotter1D):
     def show(self):
         pass
 
+    def get_error(self, xn=None, pn=None):
+        pde = self.pde
+        if not pde.has_exact():
+            return 0.0, 0.0, 0.0
+
+        if xn is None and pn is None:
+            xn, pn = self.get_plot_data()
+
+        pde.t += pde.dt
+        yn = self.pde.exact(xn)
+        pde.t -= pde.dt
+        diff = yn - pn
+        err_L1 = np.mean(np.abs(diff))
+        err_L2 = np.sqrt(np.mean(diff**2))
+        err_Linf = np.max(np.abs(diff))
+        return err_L1, err_L2, err_Linf
+
     def plot_solution(self):
         xn, pn = self.get_plot_data()
         pde = self.pde
@@ -141,6 +158,7 @@ class AppFD1D(App1D):
         self.plotter = plotter
 
         solver = self.optimizer.from_args(pde, nn, plotter, args)
+        solver.use_loss_for_tolerance()
         self.solver = solver
         self.iterate()
 

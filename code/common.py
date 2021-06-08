@@ -199,7 +199,7 @@ class Optimizer:
             help='Output directory (output files are dumped here).'
         )
 
-    def __init__(self, pde, nn, plotter, n_train, n_skip=100, tol=1e-6, 
+    def __init__(self, pde, nn, plotter, n_train, n_skip=100, tol=1e-6,
                  lr=1e-2, plot=True, out_dir=None, opt_class=optim.Adam):
         '''Initializer
 
@@ -233,6 +233,11 @@ class Optimizer:
         self.lr = lr
         self.plot = plot
         self.out_dir = out_dir
+        self.opt = None
+        self.loss_for_tolerance = False
+
+    def use_loss_for_tolerance(self):
+        self.loss_for_tolerance = True
 
     def closure(self):
         opt = self.opt
@@ -246,8 +251,11 @@ class Optimizer:
         plotter = self.plotter
         n_train = self.n_train
         n_skip = self.n_skip
-        opt = self.opt_class(self.nn.parameters(), lr=self.lr)
-        self.opt = opt
+        if self.opt is None:
+            opt = self.opt_class(self.nn.parameters(), lr=self.lr)
+            self.opt = opt
+        else:
+            opt = self.opt
         if self.plot:
             plotter.plot()
 
@@ -277,7 +285,7 @@ class Optimizer:
                     f"Iteration ({i}/{n_train}): Loss={loss.item():.3e}" +
                     e_str
                 )
-                if abs(err_Linf) < 1e-8:
+                if abs(err_Linf) < 1e-8 or self.loss_for_tolerance:
                     err = loss.item()
                 else:
                     err = err_Linf
@@ -299,7 +307,7 @@ class Optimizer:
         print("Saving output to", dirname)
         fname = os.path.join(dirname, 'solver.npz')
         np.savez(
-            fname, loss=self.loss, error_L1=self.errors_L1, 
+            fname, loss=self.loss, error_L1=self.errors_L1,
             error_L2=self.errors_L2, error_Linf=self.errors_Linf,
             time_taken=self.time_taken
         )
