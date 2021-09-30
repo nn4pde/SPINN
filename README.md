@@ -2,10 +2,13 @@
 
 This repository contains the code and manuscript for research done on Sparse
 Physics-based and Interpretable Neural Networks for PDEs. More details are
-available in the following preprint:
+available in the following publication:
 
-- Amuthan A. Ramabathiran and Prabhu Ramachandran, "SPINN: Sparse,
-  Physics-based, and Interpretable Neural Networks for PDEs",
+- Amuthan A. Ramabathiran and Prabhu Ramachandran^, "SPINN: Sparse,
+  Physics-based, and partially Interpretable Neural Networks for PDEs",
+  Journal of Computational Physics, Volume 445, pages 110600, 2021
+  [doi:10.1016/j.jcp.2021.110600](https://doi.org/10.1016/j.jcp.2021.110600).
+  (^ Joint first author).
   [arXiv:2102.13037](https://arxiv.org/abs/2102.13037).
 
 
